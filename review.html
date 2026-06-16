@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تقييم المطعم – Rate Me</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Public Header -->
+  <header
+    style="background:var(--bg-white); padding:15px 20px; display:flex; justify-content:space-between; align-items:center; box-shadow:var(--shadow); position:sticky; top:0; z-index:100;">
+    <div style="font-weight:800; color:var(--primary-dark);">Rate Me</div>
+  </header>
+
+  <!-- Main Content -->
+  <main style="padding: 40px 20px; max-width:800px; margin:0 auto; width:100%;">
+
+    <!-- Restaurant Info -->
+    <div class="card" id="restaurantInfo" style="text-align:center; display:none;">
+      <img id="restaurantLogo" src="" alt="Logo"
+        style="width:100px; height:100px; border-radius:50%; margin-bottom:15px; object-fit:cover;">
+      <h1 id="restaurantName" style="margin-bottom:10px;"></h1>
+      <p id="restaurantDesc" style="color:var(--text-muted);"></p>
+    </div>
+
+    <!-- Products Grid -->
+    <div id="productsGrid">
+      <!-- Products render here -->
+    </div>
+
+  </main>
+
+  <!-- Review Modal -->
+  <div class="modal" id="reviewModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>أضف تقييمك</h3>
+        <button class="close-modal" id="closeReview">&times;</button>
+      </div>
+      <form id="reviewForm">
+        <input type="hidden" id="reviewProdId">
+        <div class="form-group">
+          <label>اسمك</label>
+          <input type="text" id="reviewerName" placeholder="الاسم" required>
+        </div>
+        <div class="form-group">
+          <label>التقييم</label>
+          <select id="reviewRating" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+            <option value="5">⭐⭐⭐⭐⭐ (ممتاز)</option>
+            <option value="4">⭐⭐⭐⭐ (جيد جدًا)</option>
+            <option value="3">⭐⭐⭐ (جيد)</option>
+            <option value="2">⭐⭐ (سيء)</option>
+            <option value="1">⭐ (سيء جدًا)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>تعليق</label>
+          <textarea id="reviewComment" rows="3" placeholder="رأيك وجد المنتج؟"></textarea>
+        </div>
+        <button type="submit" class="btn" style="width:100%;">إرسال التقييم</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="review.js"></script>
+</body>
+
+</html>
