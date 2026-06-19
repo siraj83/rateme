@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Rate Me – لوحة تحكم المالك</title>
-  
+
   <!-- FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Fonts -->
@@ -12,150 +13,172 @@
   <!-- Local CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
+
+<div class="modal" id="reviewsModal">
+  <div class="modal-content" style="max-width:800px;">
+    <div class="modal-header">
+      <h3>تقييمات المنتج</h3>
+      <button class="close-modal" onclick="closeReviewsModal()">
+        ×
+      </button>
+    </div>
+
+    <div id="reviewsContainer"></div>
+  </div>
+</div>
+
 <body>
 
-<!-- Mobile Header -->
-<header class="mobile-header">
-  <div class="logo-mobile">Rate Me</div>
-  <button class="menu-toggle-btn" id="menuToggle" aria-label="القائمة">
-    <i class="fas fa-bars"></i>
-  </button>
-</header>
-
-<!-- Overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <h2>Rate Me</h2>
-  </div>
-  <nav>
-    <a href="#" class="active"><i class="fas fa-home"></i> لوحة التحكم</a>
-    <a href="#restaurant"><i class="fas fa-store"></i> معلومات المطعم</a>
-    <a href="#products"><i class="fas fa-utensils"></i> قائمة المنتجات</a>
-    <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
-  </nav>
-</aside>
-
-<!-- Main Content -->
-<main class="main">
-  <div class="page-header">
-    <h1 id="welcomeMsg">مرحبًا بك، صاحب المطعم 👋</h1>
-    <button class="btn" id="addProductBtn">
-      <i class="fas fa-plus"></i> إضافة منتج
+  <!-- Mobile Header -->
+  <header class="mobile-header">
+    <div class="logo-mobile">Rate Me</div>
+    <button class="menu-toggle-btn" id="menuToggle" aria-label="القائمة">
+      <i class="fas fa-bars"></i>
     </button>
-  </div>
+  </header>
 
-  <!-- Restaurant Info Card -->
-  <div class="card" id="restaurant">
-    <div class="card-header">
-      <h2><i class="fas fa-store-alt"></i> بيانات المطعم</h2>
+  <!-- Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>Rate Me</h2>
     </div>
-    <form id="restaurantForm">
-      <div class="form-grid">
-        <div class="form-group full-width">
-          <label>اسم المطعم</label>
-          <input type="text" id="restaurantName" placeholder="أدخل اسم المطعم">
+    <nav>
+      <a href="#" class="active"><i class="fas fa-home"></i> لوحة التحكم</a>
+      <a href="#restaurant"><i class="fas fa-store"></i> معلومات المطعم</a>
+      <a href="#products"><i class="fas fa-utensils"></i> قائمة المنتجات</a>
+      <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="page-header">
+      <h1 id="welcomeMsg">مرحبًا بك، صاحب المطعم 👋</h1>
+      <button class="btn" id="addProductBtn">
+        <i class="fas fa-plus"></i> إضافة منتج
+      </button>
+    </div>
+
+    <!-- Restaurant Info Card -->
+    <div class="card" id="restaurant">
+      <div class="card-header">
+        <h2><i class="fas fa-store-alt"></i> بيانات المطعم</h2>
+      </div>
+      <form id="restaurantForm">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>اسم المطعم</label>
+            <input type="text" id="restaurantName" placeholder="أدخل اسم المطعم">
+          </div>
+          <div class="form-group">
+            <label>شعار المطعم</label>
+            <!-- Hidden Input for URL -->
+            <input type="hidden" id="restaurantLogo">
+            <input type="file" id="logoFile" accept="image/*">
+          </div>
+          <div class="form-group">
+            <label>المدينة / الموقع</label>
+            <input type="text" id="restaurantLocation" placeholder="الموقع الجغرافي">
+          </div>
+          <div class="form-group">
+            <label>موقع المطعم على خرائط Google</label>
+            <input type="url" id="restaurantGoogleMapsUrl" placeholder="ألصق رابط موقع المطعم من Google Maps">
+            <small>
+              افتح خرائط Google ← اختر موقع المطعم ← مشاركة ← نسخ الرابط
+            </small>
+          </div>
+          <div class="form-group full-width">
+            <label>وصف المطعم ونوع المطبخ</label>
+            <textarea id="restaurantDesc" rows="3" placeholder="وصف مختصر عن المطعم..."></textarea>
+          </div>
+        </div>
+        <button type="button" class="btn" id="saveRestaurantBtn">
+          <i class="fas fa-save"></i> حفظ التغييرات
+        </button>
+      </form>
+    </div>
+
+    <!-- Products List Card -->
+    <div class="card" id="products">
+      <div class="card-header">
+        <h2><i class="fas fa-list"></i> قائمة المنتجات</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="products-table" id="productsTable">
+          <thead>
+            <tr>
+              <th>الصورة</th>
+              <th>المنتج</th>
+              <th>السعر</th>
+              <th>المكونات</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="productsTableBody">
+            <!-- Products render here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add/Edit Product Modal -->
+  <div class="modal" id="productModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">إضافة منتج جديد</h3>
+        <button class="close-modal" id="closeModal">&times;</button>
+      </div>
+      <form id="productForm">
+        <div class="form-group">
+          <label>اسم المنتج</label>
+          <input type="text" id="prodName" placeholder="اسم الطبق" required>
         </div>
         <div class="form-group">
-          <label>شعار المطعم</label>
+          <label>السعر</label>
+          <input type="text" id="prodPrice" placeholder="00.00" required>
+        </div>
+        <div class="form-group">
+          <label>المكونات</label>
+          <input type="text" id="prodIngredients" placeholder="المكونات الرئيسية">
+        </div>
+        <div class="form-group">
+          <label>صورة المنتج</label>
           <!-- Hidden Input for URL -->
-          <input type="hidden" id="restaurantLogo">
-          <input type="file" id="logoFile" accept="image/*">
+          <input type="hidden" id="prodImage">
+          <input type="file" id="prodImageFile" accept="image/*">
         </div>
-        <div class="form-group">
-          <label>المدينة / الموقع</label>
-          <input type="text" id="restaurantLocation" placeholder="الموقع الجغرافي">
-        </div>
-        <div class="form-group full-width">
-          <label>وصف المطعم ونوع المطبخ</label>
-          <textarea id="restaurantDesc" rows="3" placeholder="وصف مختصر عن المطعم..."></textarea>
-        </div>
-      </div>
-      <button type="button" class="btn" id="saveRestaurantBtn">
-        <i class="fas fa-save"></i> حفظ التغييرات
-      </button>
-    </form>
-  </div>
-
-  <!-- Products List Card -->
-  <div class="card" id="products">
-    <div class="card-header">
-      <h2><i class="fas fa-list"></i> قائمة المنتجات</h2>
-    </div>
-    <div class="table-responsive">
-      <table class="products-table" id="productsTable">
-        <thead>
-          <tr>
-            <th>الصورة</th>
-            <th>المنتج</th>
-            <th>السعر</th>
-            <th>المكونات</th>
-            <th>الإجراءات</th>
-          </tr>
-        </thead>
-        <tbody id="productsTableBody">
-          <!-- Products render here -->
-        </tbody>
-      </table>
+        <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">
+          <i class="fas fa-save"></i> حفظ المنتج
+        </button>
+      </form>
     </div>
   </div>
-</main>
 
-<!-- Add/Edit Product Modal -->
-<div class="modal" id="productModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3 id="modalTitle">إضافة منتج جديد</h3>
-      <button class="close-modal" id="closeModal">&times;</button>
-    </div>
-    <form id="productForm">
-      <div class="form-group">
-        <label>اسم المنتج</label>
-        <input type="text" id="prodName" placeholder="اسم الطبق" required>
+  <!-- Custom Confirmation Modal -->
+  <div class="modal" id="confirmModal">
+    <div class="modal-content" style="text-align: center; max-width: 350px;">
+      <div style="font-size: 3rem; color: var(--danger); margin-bottom: 10px;">
+        <i class="fas fa-exclamation-circle"></i>
       </div>
-      <div class="form-group">
-        <label>السعر</label>
-        <input type="text" id="prodPrice" placeholder="00.00" required>
+      <h3>هل أنت متأكد؟</h3>
+      <p style="color: var(--text-muted); margin: 10px 0 20px;">لا يمكن التراجع عن هذا الإجراء.</p>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn" id="cancelDelete" style="background: #e5e7eb; color: #333; flex: 1;">إلغاء</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn" style="flex: 1;">نعم، احذف</button>
       </div>
-      <div class="form-group">
-        <label>المكونات</label>
-        <input type="text" id="prodIngredients" placeholder="المكونات الرئيسية">
-      </div>
-      <div class="form-group">
-        <label>صورة المنتج</label>
-        <!-- Hidden Input for URL -->
-        <input type="hidden" id="prodImage">
-        <input type="file" id="prodImageFile" accept="image/*">
-      </div>
-      <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">
-        <i class="fas fa-save"></i> حفظ المنتج
-      </button>
-    </form>
-  </div>
-</div>
-
-<!-- Custom Confirmation Modal -->
-<div class="modal" id="confirmModal">
-  <div class="modal-content" style="text-align: center; max-width: 350px;">
-    <div style="font-size: 3rem; color: var(--danger); margin-bottom: 10px;">
-      <i class="fas fa-exclamation-circle"></i>
-    </div>
-    <h3>هل أنت متأكد؟</h3>
-    <p style="color: var(--text-muted); margin: 10px 0 20px;">لا يمكن التراجع عن هذا الإجراء.</p>
-    <div style="display: flex; gap: 10px;">
-      <button class="btn" id="cancelDelete" style="background: #e5e7eb; color: #333; flex: 1;">إلغاء</button>
-      <button class="btn btn-danger" id="confirmDeleteBtn" style="flex: 1;">نعم، احذف</button>
     </div>
   </div>
-</div>
 
-<!-- Toast Container -->
-<div id="toast-container"></div>
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
 
-<!-- Load Script -->
-<script src="app.js"></script>
+  <!-- Load Script -->
+  <script src="app.js"></script>
 
 </body>
+
 </html>

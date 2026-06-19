@@ -1,103 +1,120 @@
-// --- CONFIGURATION ---
-const CONFIG = {
-  // 🔑 KEYS (Paste your GHL Keys here)
-  API_KEY: 'pit-aef9dfb5-569b-4224-b83b-5547294bde01',
-  LOCATION_ID: '0IV0KhyUwqPwxd8GvQ28',
-
-  // FIELD IDS
-  FIELD_IDS: {
-    products: 'ufvPeB5ZHDfttbn6cLyP',
-    name: '58ewZU5T6v0Jwl1s96m7',
-    desc: 'mBzajcGycmVXUvMGlJUc',
-    location: 'Cgl3FIQiJc8Fj7SEwwH7'
-  },
-
-  // 🔧 LOCAL TESTING ONLY
-  // Set to TRUE if running 'node server.js' locally
-  // Set to FALSE if uploading to Linux Shared Hosting (Direct GHL)
-  USE_PROXY: true,
-  PROXY_URL: 'http://localhost:3000'
-};
-
 // --- 1. INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
-  const params = new URLSearchParams(window.location.search);
-  const contactId = params.get('rid');
 
-  if (contactId) {
-    console.log("Restaurant ID:", contactId);
-    // Load Data
-    await fetchRestaurantData(contactId);
-    await loadProducts(contactId);
-  } else {
-    window.location.href = "http://127.0.0.1:5500/login.html"; // Fallback
+  const userData =
+    localStorage.getItem('user');
+
+  if (!userData) {
+
+    window.location.href =
+      '/login.html';
+
+    return;
   }
+
+  const user =
+    JSON.parse(userData);
+
+  console.log(
+    'Logged User:',
+    user
+  );
+
+  document.getElementById('welcomeMsg').innerText =
+    `مرحبًا بك، ${user.restaurant_name} 👋`;
+
+  await loadRestaurant();
+  await loadProducts();
+
 });
-
-// --- 2. API HELPER (Handles Proxy vs Direct) ---
-async function apiCall(endpoint, method = 'GET', body = null) {
-  const headers = {
-    'Authorization': `Bearer ${CONFIG.API_KEY}`,
-    'Content-Type': 'application/json',
-    'Version': '2021-07-28'
-  };
-
-  if (CONFIG.USE_PROXY) {
-    // For Local VS Code Dev (Avoids CORS)
-    return fetch(`${CONFIG.PROXY_URL}?endpoint=${encodeURIComponent(endpoint)}&method=${method}&token=${CONFIG.API_KEY}`, {
-      method: 'POST', // Always POST to proxy
-      body: body ? JSON.stringify(body) : null
-    });
-  } else {
-    // For Production Hosting (Direct to GHL)
-    const options = { method, headers };
-    if (body) options.body = JSON.stringify(body);
-    return fetch(`https://services.leadconnectorhq.com${endpoint}`, options);
-  }
-}
-
-// --- 3. DATA FETCHING ---
-async function fetchRestaurantData(contactId) {
-  try {
-    const res = await apiCall(`/contacts/${contactId}`);
-    const data = await res.json();
-    const contact = data.contact;
-
-    if (contact) {
-      const name = getCustomField(contact, CONFIG.FIELD_IDS.name);
-      const loc = getCustomField(contact, CONFIG.FIELD_IDS.location);
-      const desc = getCustomField(contact, CONFIG.FIELD_IDS.desc);
-
-      if (name) document.getElementById('restaurantName').value = name;
-      if (loc) document.getElementById('restaurantLocation').value = loc;
-      if (desc) document.getElementById('restaurantDesc').value = desc;
-      if (name) document.getElementById('welcomeMsg').innerText = `مرحبًا بك، ${name} 👋`;
-    }
-  } catch (error) { console.error("Error fetching contact:", error); }
-}
-
-function getCustomField(contact, id) {
-  if (!contact.customFields) return null;
-  const field = contact.customFields.find(f => f.id === id);
-  return field ? field.value : null;
-}
 
 // --- 4. PRODUCTS LOGIC ---
 let allProducts = [];
 let editingProductId = null;
 
-async function loadProducts(contactId) {
+async function loadProducts() {
   try {
-    const res = await apiCall(`/contacts/${contactId}`);
+    const token = localStorage.getItem('token');
+
+    const res = await fetch('/api/products', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
     const data = await res.json();
 
-    const productsField = data.contact?.customFields?.find(f => f.id === CONFIG.FIELD_IDS.products);
-    if (productsField && productsField.value) {
-      try { allProducts = JSON.parse(productsField.value); }
-      catch (e) { allProducts = []; }
+    if (!data.success) {
+      showToast('فشل تحميل المنتجات', 'error');
+      return;
     }
+
+    allProducts = data.products.map(p => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      ingredients: p.ingredients,
+      image: p.image_url,
+      reviews: []
+    }));
+
     renderTable();
-  } catch (error) { console.error("Error loading products:", error); }
+
+  } catch (error) {
+    console.error(error);
+    showToast('خطأ في تحميل المنتجات', 'error');
+  }
+}
+
+async function loadRestaurant() {
+  try {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch('/api/restaurant/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      showToast('فشل تحميل بيانات المطعم', 'error');
+      return;
+    }
+
+    const restaurant = data.restaurant;
+
+    if (document.getElementById('restaurantName')) {
+      document.getElementById('restaurantName').value = restaurant.name || '';
+    }
+
+    if (document.getElementById('restaurantDesc')) {
+      document.getElementById('restaurantDesc').value = restaurant.description || '';
+    }
+
+    if (document.getElementById('restaurantLocation')) {
+      document.getElementById('restaurantLocation').value = restaurant.address || '';
+    }
+
+    if (document.getElementById('restaurantGoogleMapsUrl')) {
+      document.getElementById('restaurantGoogleMapsUrl').value =
+        restaurant.google_maps_url || '';
+    }
+
+    if (document.getElementById('restaurantLogo')) {
+      document.getElementById('restaurantLogo').value = restaurant.logo_url || '';
+    }
+
+    if (document.getElementById('welcomeMsg')) {
+      document.getElementById('welcomeMsg').innerText =
+        `مرحبًا بك، ${restaurant.name} 👋`;
+    }
+
+  } catch (error) {
+    console.error(error);
+    showToast('خطأ في تحميل بيانات المطعم', 'error');
+  }
 }
 
 function renderTable() {
@@ -112,100 +129,140 @@ function renderTable() {
       <td>${prod.price}$</td>
       <td>${prod.ingredients}</td>
       <td class="actions">
-        <button class="edit-btn" onclick="openEditModal('${prod.id}')">تعديل</button>
-        <button class="delete-btn" onclick="deleteProduct('${prod.id}')">حذف</button>
-      </td>
-    `;
+      <button class="edit-btn" onclick="openEditModal('${prod.id}')">
+        تعديل
+      </button>
+
+      <button class="delete-btn" onclick="deleteProduct('${prod.id}')">
+        حذف
+      </button>
+
+      <button
+        class="btn"
+        onclick="showReviews('${prod.id}')"
+        style="margin-top:5px;"
+      >
+        التقييمات
+      </button>
+    </td>`;
     tbody.appendChild(row);
   });
 }
 
-async function saveProducts() {
+window.showReviews = async (productId) => {
+
   try {
-    // Re-fetch to get current state (Optimistic locking)
-    const res = await apiCall(`/contacts/${new URLSearchParams(window.location.search).get('rid')}`);
-    const data = await res.json();
-    const contact = data.contact;
 
-    // Update Field
-    const payload = {
-      customFields: [
-        { id: CONFIG.FIELD_IDS.products, value: JSON.stringify(allProducts) }
-      ]
-    };
+    const token =
+      localStorage.getItem('token');
 
-    // Note: We need to merge other fields too in a real app, 
-    // for now this overwrites/keeps other fields based on GHL behavior. 
-    // To be safe, send all existing fields back or use specific endpoint if available.
-    // GHL V1 API merge logic:
+    const res = await fetch(
+      `/api/products/${productId}/reviews`,
+      {
+        headers: {
+          Authorization:
+            `Bearer ${token}`
+        }
+      }
+    );
 
-    await fetch(`https://services.leadconnectorhq.com/contacts/${contact.id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${CONFIG.API_KEY}`,
-        'Content-Type': 'application/json',
-        'Version': '2021-07-28'
-      },
-      body: JSON.stringify(payload)
-    });
+    const data =
+      await res.json();
 
-    showToast('تم حفظ البيانات', 'success');
+    if (!data.success) {
+
+      showToast(
+        'فشل تحميل التقييمات',
+        'error'
+      );
+
+      return;
+    }
+
+    const container =
+      document.getElementById(
+        'reviewsContainer'
+      );
+
+    if (
+      data.reviews.length === 0
+    ) {
+
+      container.innerHTML = `
+                <p style="text-align:center">
+                    لا توجد تقييمات
+                </p>
+            `;
+
+    } else {
+
+      container.innerHTML =
+        data.reviews.map(r => `
+                    <div
+                        class="card"
+                        style="margin-bottom:10px;"
+                    >
+
+                        <strong>
+                            ${r.customer_name || 'مستخدم'}
+                        </strong>
+
+                        <div style="margin-top:5px;">
+                            🍽 الطعم:
+                            ${r.taste_rating}/5
+                        </div>
+
+                        <div>
+                            🎨 الشكل:
+                            ${r.presentation_rating}/5
+                        </div>
+
+                        <div>
+                            💰 السعر:
+                            ${r.price_rating}/5
+                        </div>
+
+                        <p style="margin-top:10px;">
+                            ${r.comment || ''}
+                        </p>
+
+                        <small>
+                            ${new Date(r.created_at)
+            .toLocaleString()}
+                        </small>
+
+                    </div>
+                `).join('');
+    }
+
+    const modal = document.getElementById('reviewsModal');
+
+    modal.style.display = 'flex';
+
+    setTimeout(() => {
+      modal.classList.add('show');
+    }, 10);
+
   } catch (error) {
+
     console.error(error);
-    showToast('خطأ في الحفظ', 'error');
+
+    showToast(
+      'خطأ في تحميل التقييمات',
+      'error'
+    );
   }
-}
+};
 
-// --- 5. UPLOAD HELPER (Media Storage) ---
-async function uploadToGHLMedia(fileInputId, urlInputId) {
-  const fileInput = document.getElementById(fileInputId);
-  if (!fileInput.files || fileInput.files.length === 0) {
-    const urlInput = document.getElementById(urlInputId);
-    return urlInput ? urlInput.value : '';
-  }
+window.closeReviewsModal = function () {
+  const modal = document.getElementById('reviewsModal');
 
-  const file = fileInput.files[0];
-  const formData = new FormData();
-  formData.append('file', file);
+  modal.classList.remove('show');
 
-  // We must use direct URL for upload, Proxy struggles with multipart usually
-  // So we bypass proxy for upload in Production
-  try {
-    // 1. Get Signed URL
-    const metaRes = await fetch(`https://services.leadconnectorhq.com/media/generateUploadUrl`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CONFIG.API_KEY}`,
-        'Content-Type': 'application/json',
-        'Version': '2021-07-28'
-      },
-      body: JSON.stringify({ fileName: file.name, fileType: file.type })
-    });
-    const meta = await metaRes.json();
-
-    // 2. Upload to S3
-    await fetch(meta.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-
-    // 3. Confirm
-    const confirmRes = await fetch(`https://services.leadconnectorhq.com/media/confirm`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CONFIG.API_KEY}`,
-        'Content-Type': 'application/json',
-        'Version': '2021-07-28'
-      },
-      body: JSON.stringify({ uploadId: meta.uploadId })
-    });
-    const finalData = await confirmRes.json();
-
-    document.getElementById(urlInputId).value = finalData.accessUrl;
-    return finalData.accessUrl;
-  } catch (error) {
-    console.error("Upload Error", error);
-    showToast('فشل في رفع الصورة', 'error');
-    return null;
-  }
-}
+  setTimeout(() => {
+    modal.style.display = 'none';
+  }, 300);
+};
 
 // --- 6. EVENT LISTENERS (UI) ---
 
@@ -222,7 +279,8 @@ function toggleSidebar() {
 menuToggle.addEventListener('click', toggleSidebar);
 overlay.addEventListener('click', toggleSidebar);
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  window.location.href = "https://rateme.ly/login";
+  localStorage.removeItem('user');
+  window.location.href = '/login.html';
 });
 
 // Modals
@@ -263,13 +321,35 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
 });
 
 window.deleteProduct = (id) => {
-  confirmModal.style.display = 'flex'; setTimeout(() => confirmModal.classList.add('show'), 10);
+  confirmModal.style.display = 'flex';
+  setTimeout(() => confirmModal.classList.add('show'), 10);
 
-  // Attach one-time listener to confirm button
-  document.getElementById('confirmDeleteBtn').onclick = () => {
-    allProducts = allProducts.filter(p => p.id !== id);
-    saveProducts();
-    renderTable();
+  document.getElementById('confirmDeleteBtn').onclick = async () => {
+    const token = localStorage.getItem('token');
+
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        showToast('فشل حذف المنتج', 'error');
+        return;
+      }
+
+      await loadProducts();
+      showToast('تم حذف المنتج', 'success');
+
+    } catch (error) {
+      console.error(error);
+      showToast('خطأ في حذف المنتج', 'error');
+    }
+
     confirmModal.classList.remove('show');
     setTimeout(() => confirmModal.style.display = 'none', 300);
   };
@@ -278,36 +358,100 @@ window.deleteProduct = (id) => {
 // Forms
 document.getElementById('productForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const imageUrl = await uploadToGHLMedia('prodImageFile', 'prodImage');
-  const finalImage = imageUrl || `https://picsum.photos/seed/${document.getElementById('prodName').value}/50/50`;
+
+  const token = localStorage.getItem('token');
 
   const newProd = {
-    id: editingProductId || Date.now().toString(),
     name: document.getElementById('prodName').value,
     price: document.getElementById('prodPrice').value,
     ingredients: document.getElementById('prodIngredients').value,
-    image: finalImage,
-    reviews: editingProductId ? allProducts.find(p => p.id === editingProductId).reviews : []
+    image_url: document.getElementById('prodImage').value || null
   };
 
-  if (editingProductId) {
-    const idx = allProducts.findIndex(p => p.id === editingProductId);
-    allProducts[idx] = newProd;
-    showToast('تم التعديل', 'success');
-  } else {
-    allProducts.push(newProd);
-    showToast('تمت الإضافة', 'success');
-  }
+  try {
+    if (editingProductId) {
+      await fetch(`/api/products/${editingProductId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(newProd)
+      });
 
-  saveProducts();
-  renderTable();
-  closeModal();
+      showToast('تم تعديل المنتج', 'success');
+    } else {
+      await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(newProd)
+      });
+
+      showToast('تمت إضافة المنتج', 'success');
+    }
+
+    await loadProducts();
+    closeModal();
+
+  } catch (error) {
+    console.error(error);
+    showToast('خطأ في حفظ المنتج', 'error');
+  }
 });
 
 document.getElementById('saveRestaurantBtn').addEventListener('click', async () => {
-  const logoUrl = await uploadToGHLMedia('logoFile', 'restaurantLogo');
-  // Similar save logic for restaurant fields...
-  showToast('تم حفظ البانات', 'success');
+  try {
+    const token = localStorage.getItem('token');
+
+    const payload = {
+      name: document.getElementById('restaurantName').value,
+      description: document.getElementById('restaurantDesc').value,
+      address: document.getElementById('restaurantLocation').value,
+      google_maps_url: document.getElementById('restaurantGoogleMapsUrl').value || null,
+      logo_url: document.getElementById('restaurantLogo').value || null,
+      phone: null
+    };
+
+    payload.slug = payload.name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-');
+
+    const res = await fetch('/api/restaurant/me', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      showToast('فشل حفظ بيانات المطعم', 'error');
+      return;
+    }
+
+    localStorage.setItem('user', JSON.stringify({
+      ...JSON.parse(localStorage.getItem('user')),
+      restaurant_name: data.restaurant.name,
+      slug: data.restaurant.slug,
+      logo_url: data.restaurant.logo_url
+    }));
+
+    document.getElementById('welcomeMsg').innerText =
+      `مرحبًا بك، ${data.restaurant.name} 👋`;
+
+    showToast('تم حفظ بيانات المطعم', 'success');
+
+  } catch (error) {
+    console.error(error);
+    showToast('خطأ في حفظ بيانات المطعم', 'error');
+  }
 });
 
 // Toasts

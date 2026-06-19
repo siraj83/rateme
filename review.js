@@ -1,138 +1,152 @@
-// --- CONFIGURATION ---
-const CONFIG = {
-  API_KEY: 'pit-aef9dfb5-569b-4224-b83b-5547294bde01',
-  LOCATION_ID: '0IV0KhyUwqPwxd8GvQ28',
-  FIELD_ID_PRODUCTS: 'ufvPeB5ZHDfttbn6cLyP',
-  FIELD_IDS: {
-    name: '58ewZU5T6v0Jwl1s96m7',
-    desc: 'mBzajcGycmVXUvMGlJUc'
-  },
-  USE_PROXY: true,
-  PROXY_URL: 'http://localhost:3000'
-};
+let currentProducts = [];
 
-// --- STATE ---
-let allProducts = [];
+const params = new URLSearchParams(window.location.search);
+const slug = params.get('slug');
 
-// --- HELPER ---
-async function apiCall(endpoint, method = 'GET', body = null) {
-  // (Same apiCall function as login.js)
-  const headers = { 'Authorization': `Bearer ${CONFIG.API_KEY}`, 'Content-Type': 'application/json', 'Version': '2021-07-28' };
-  if (CONFIG.USE_PROXY) {
-    return fetch(`${CONFIG.PROXY_URL}?endpoint=${encodeURIComponent(endpoint)}&method=${method}&token=${CONFIG.API_KEY}`, { method: 'POST', body: body ? JSON.stringify(body) : null });
-  } else {
-    const options = { method, headers };
-    if (body) options.body = JSON.stringify(body);
-    return fetch(`https://services.leadconnectorhq.com${endpoint}`, options);
-  }
-}
-
-function getCustomField(contact, id) {
-  if (!contact.customFields) return null;
-  return contact.customFields.find(f => f.id === id)?.value;
-}
-
-// --- INIT ---
 window.addEventListener('DOMContentLoaded', async () => {
-  const params = new URLSearchParams(window.location.search);
-  const rid = params.get('rid');
-
-  if (!rid) {
-    document.body.innerHTML = '<h1 style="text-align:center; margin-top:50px;">خطأ: لم يتم تحديد المطعم.</h1>';
+  if (!slug) {
+    alert('رابط المطعم غير صحيح');
     return;
   }
 
-  // 1. Fetch Restaurant Info
-  const res = await apiCall(`/contacts/${rid}`, 'GET');
-  const data = await res.json();
-  const contact = data.contact;
-
-  if (contact) {
-    const name = getCustomField(contact, CONFIG.FIELD_IDS.name);
-    const desc = getCustomField(contact, CONFIG.FIELD_IDS.desc);
-    // Note: You might need a logo field ID, but using placeholder for now
-    const logo = getCustomField(contact, 'YOUR_LOGO_FIELD_ID') || 'https://via.placeholder.com/100';
-
-    document.getElementById('restaurantName').innerText = name || 'مطعم';
-    document.getElementById('restaurantDesc').innerText = desc || '';
-    document.getElementById('restaurantLogo').src = logo;
-    document.getElementById('restaurantInfo').style.display = 'block';
-
-    // 2. Fetch Products
-    const productsField = contact.customFields?.find(f => f.id === CONFIG.FIELD_ID_PRODUCTS);
-    if (productsField && productsField.value) {
-      allProducts = JSON.parse(productsField.value);
-      renderProducts();
-    }
-  }
+  await loadPublicRestaurant();
 });
 
-// --- RENDER ---
+async function loadPublicRestaurant() {
+  try {
+    const res = await fetch(`/api/public/restaurant/${slug}`);
+    const data = await res.json();
+
+    if (!data.success) {
+      alert('لم يتم العثور على المطعم');
+      return;
+    }
+
+    const restaurant = data.restaurant;
+    currentProducts = data.products;
+
+    document.getElementById('restaurantInfo').style.display = 'block';
+    document.getElementById('restaurantName').innerText = restaurant.name || '';
+    document.getElementById('restaurantDesc').innerText = restaurant.description || '';
+
+    const logo = document.getElementById('restaurantLogo');
+    if (restaurant.logo_url) {
+      logo.src = restaurant.logo_url;
+      logo.style.display = 'inline-block';
+    } else {
+      logo.style.display = 'none';
+    }
+
+    renderProducts();
+
+  } catch (error) {
+    console.error(error);
+    alert('حدث خطأ أثناء تحميل بيانات المطعم');
+  }
+}
+
 function renderProducts() {
   const grid = document.getElementById('productsGrid');
   grid.innerHTML = '';
 
-  allProducts.forEach(prod => {
-    const card = document.createElement('div');
-    card.className = 'prod-card';
+  if (!currentProducts.length) {
+    grid.innerHTML = `
+      <div class="card" style="text-align:center;">
+        لا توجد منتجات حالياً
+      </div>
+    `;
+    return;
+  }
 
-    // Calculate Average Rating
-    const avgRating = prod.reviews.length > 0
-      ? (prod.reviews.reduce((a, b) => a + parseInt(b.rating), 0) / prod.reviews.length).toFixed(1)
-      : '0.0';
+  currentProducts.forEach(product => {
+    const avg = product.avg_rating ? Number(product.avg_rating).toFixed(1) : '0.0';
+    const total = product.total_reviews || 0;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.marginBottom = '15px';
 
     card.innerHTML = `
-      <img src="${prod.image || 'https://via.placeholder.com/300x200'}" alt="${prod.name}">
-      <h3>${prod.name}</h3>
-      <div class="price">${prod.price}$</div>
-      <div style="font-size:0.9rem; color:#666; margin-bottom:10px;">
-        <i class="fas fa-star" style="color:gold;"></i> ${avgRating} (${prod.reviews.length} تقييمات)
+      <div style="display:flex; gap:15px; align-items:center;">
+        <img
+          src="${product.image_url || 'https://via.placeholder.com/80'}"
+          alt="${product.name}"
+          style="width:80px; height:80px; border-radius:12px; object-fit:cover;"
+        >
+
+        <div style="flex:1;">
+          <h3 style="margin:0 0 5px;">${product.name}</h3>
+          <p style="margin:0 0 5px; color:var(--text-muted);">${product.ingredients || ''}</p>
+          <p style="margin:0; font-weight:bold;">${product.price || ''} LYD</p>
+          <small>⭐ ${avg} — ${total} تقييم</small>
+        </div>
+
+        <button class="btn" onclick="openReviewModal('${product.id}')">
+          قيّم
+        </button>
       </div>
-      <button class="btn" onclick="openReview('${prod.id}')">أضف تقييمك</button>
     `;
+
     grid.appendChild(card);
   });
 }
 
-// --- SUBMIT REVIEW ---
-let currentProdId = null;
+function openReviewModal(productId) {
+  document.getElementById('reviewProdId').value = productId;
+  document.getElementById('reviewModal').style.display = 'flex';
+  setTimeout(() => {
+    document.getElementById('reviewModal').classList.add('show');
+  }, 10);
+}
 
-window.openReview = (id) => {
-  currentProdId = id;
-  const modal = document.getElementById('reviewModal');
-  modal.style.display = 'flex';
-  setTimeout(() => modal.classList.add('show'), 10);
-};
-
-document.getElementById('closeReview').addEventListener('click', () => {
+function closeReviewModal() {
   document.getElementById('reviewModal').classList.remove('show');
-  setTimeout(() => document.getElementById('reviewModal').style.display = 'none', 300);
-});
+  setTimeout(() => {
+    document.getElementById('reviewModal').style.display = 'none';
+  }, 300);
+}
+
+document.getElementById('closeReview').addEventListener('click', closeReviewModal);
 
 document.getElementById('reviewForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = document.getElementById('reviewerName').value;
-  const rating = document.getElementById('reviewRating').value;
-  const comment = document.getElementById('reviewComment').value;
 
-  // Find Product
-  const index = allProducts.findIndex(p => p.id === currentProdId);
-  if (index > -1) {
-    allProducts[index].reviews.push({ user: name, rating: parseInt(rating), comment });
+  const productId = document.getElementById('reviewProdId').value;
 
-    // Save to GHL
-    try {
-      // We need to re-fetch to get latest version (or just merge)
-      // Simplest is to just PUT the whole products array again
-      await apiCall(`/contacts/${new URLSearchParams(window.location.search).get('rid')}`, 'PUT', {
-        customFields: [{ id: CONFIG.FIELD_ID_PRODUCTS, value: JSON.stringify(allProducts) }]
-      });
-      alert('شكراً ل participationك!');
-      document.getElementById('reviewModal').classList.remove('show');
-      setTimeout(() => document.getElementById('reviewModal').style.display = 'none', 300);
-      renderProducts(); // Re-render to update star count
-    } catch (err) {
-      alert('خطأ في إرسال التقييم');
+  const payload = {
+    customer_name: document.getElementById('reviewerName').value,
+    taste_rating: Number(document.getElementById('tasteRating').value),
+    presentation_rating: Number(document.getElementById('presentationRating').value),
+    price_rating: Number(document.getElementById('priceRating').value),
+    comment: document.getElementById('reviewComment').value,
+    visit_date: new Date().toISOString().slice(0, 10)
+  };
+
+  try {
+    const res = await fetch(`/api/products/${productId}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      alert('فشل إرسال التقييم');
+      return;
     }
+
+    alert('شكراً لك، تم إرسال تقييمك بنجاح');
+
+    document.getElementById('reviewForm').reset();
+    closeReviewModal();
+
+    await loadPublicRestaurant();
+
+  } catch (error) {
+    console.error(error);
+    alert('حدث خطأ أثناء إرسال التقييم');
   }
 });
