@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Rate Me – لوحة تحكم المسؤول</title>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<div class="modal" id="reviewsModal">
+    <div class="modal-content" style="max-width:800px;">
+        <div class="modal-header">
+            <h3>تقييمات المنتج</h3>
+            <button class="close-modal" onclick="closeReviewsModal()">×</button>
+        </div>
+        <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+            <select id="reviewsPeriodFilter" style="padding:10px; border-radius:8px;">
+                <option value="all">كل التقييمات</option>
+                <option value="week">آخر أسبوع</option>
+                <option value="month">آخر شهر</option>
+                <option value="three_months">آخر 3 أشهر</option>
+            </select>
+
+            <select id="reviewsSortFilter" style="padding:10px; border-radius:8px;">
+                <option value="newest">الأحدث</option>
+                <option value="highest">الأعلى تقييماً</option>
+                <option value="lowest">الأقل تقييماً</option>
+            </select>
+        </div>
+        <div id="reviewsContainer"></div>
+    </div>
+</div>
+
+<body class="admin-theme">
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="logo-mobile">Rate Me</div>
+        <button class="menu-toggle-btn" id="menuToggle" aria-label="القائمة">
+            <i class="fas fa-bars"></i>
+        </button>
+    </header>
+
+    <!-- Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="https://bkrxqjhzaedpvmrofugz.supabase.co/storage/v1/object/public/rateme-images/1d34886d-5ba1-4143-8945-41fa5f443e4b/products/1781954606839-189719298.png"
+                alt="Rate Me" class="sidebar-logo">
+            <h2>Rate Me Admin</h2>
+        </div>
+        <nav>
+            <a href="#" class="nav-link active" data-section="dashboardSection"><i class="fas fa-home"></i>لوحة
+                التحكم</a>
+            <a href="#" class="nav-link" data-section="restaurantsSection"><i class="fas fa-store"></i>المطاعم
+                والاشتراكات</a>
+            <a href="#" class="nav-link" data-section="plansSection"><i class="fas fa-utensils"></i>الباقات</a>
+            <a href="#" class="nav-link" data-section="dashboardSection"><i class="fas fa-chart-line"></i>الإعدادات</a>
+            <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i>تسجيل الخروج</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="page-header">
+            <h1 id="welcomeMsg">مرحبًا بك، صاحب المنصة 👋</h1>
+            <button class="btn" id="refreshAdminBtn">
+                <i class="fas fa-sync-alt"></i> تحديث البيانات
+            </button>
+        </div>
+
+        <!-- Restaurant Reviews -->
+        <section id="dashboardSection" class="page-section active-section">
+
+            <div class="card">
+                <h2>نظرة عامة على التقييمات</h2>
+                <p style="color:var(--text-muted); margin-bottom:20px;">
+                    متوسط تقييمات العملاء حسب الطعم والشكل والسعر
+                </p>
+
+                <div style="height:300px;">
+                    <canvas id="ratingsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:20px;">
+                <h3>إحصائيات الفروع</h3>
+                <div id="branchStatsContainer"></div>
+            </div>
+
+            <div class="stats-grid" style="margin-top:20px;">
+
+                <div class="card">
+                    <h3 id="totalProducts">0</h3>
+                    <p>عدد المطاعم</p>
+                </div>
+
+                <div class="card">
+                    <h3 id="totalReviews">0</h3>
+                    <p>عدد المستخدمين</p>
+                </div>
+
+                <div class="card">
+                    <h3 id="avgRating">0</h3>
+                    <p>الاشتراكات النشطة</p>
+                </div>
+
+                <div class="card">
+                    <h3 id="bestProduct">-</h3>
+                    <p>بانتظار الدفع</p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- Restaurant Info Card -->
+        <section id="restaurantSection" class="page-section">
+            <div class="card" id="restaurant">
+                <div class="card-header">
+                    <h2><i class="fas fa-store-alt"></i> بيانات المطعم</h2>
+                </div>
+                <form id="restaurantForm">
+                    <div class="form-grid">
+                        <div class="card">
+                            <h3>الاشتراك الحالي</h3>
+
+                            <div id="subscriptionInfo">
+                                جاري تحميل بيانات الاشتراك...
+                            </div>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>اسم المطعم</label>
+                            <input type="text" id="restaurantName" placeholder="أدخل اسم المطعم">
+                        </div>
+                        <div class="form-group">
+                            <label>شعار المطعم</label>
+                            <input type="file" id="restaurantLogoFile" accept="image/*">
+                            <input type="hidden" id="restaurantLogo">
+                            <div style="margin-top:10px;">
+                                <img id="restaurantLogoPreview" src=""
+                                    style="max-width:120px; display:none; border-radius:12px;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>المدينة / الموقع</label>
+                            <input type="text" id="restaurantLocation" placeholder="الموقع الجغرافي">
+                        </div>
+                        <div class="form-group">
+                            <label>موقع المطعم على خرائط Google</label>
+                            <input type="url" id="restaurantGoogleMapsUrl"
+                                placeholder="ألصق رابط موقع المطعم من Google Maps">
+                            <small>
+                                افتح خرائط Google ← اختر موقع المطعم ← مشاركة ← نسخ الرابط
+                            </small>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>وصف المطعم ونوع المطبخ</label>
+                            <textarea id="restaurantDesc" rows="3" placeholder="وصف مختصر عن المطعم..."></textarea>
+                        </div>
+                    </div>
+                    <button type="button" class="btn" id="saveRestaurantBtn">
+                        <i class="fas fa-save"></i> حفظ التغييرات
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Restaurants Section Card -->
+        <section id="restaurantsSection" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-store"></i> المطاعم والاشتراكات</h2>
+                </div>
+
+                <div class="table-responsive admin-table-responsive">
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th>المطعم</th>
+                                <th>الهاتف</th>
+                                <th>الباقة</th>
+                                <th>حالة الدفع</th>
+                                <th>حالة الاشتراك</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminRestaurantsTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="adminRestaurantsMobileList" class="admin-mobile-list"></div>
+            </div>
+        </section>
+
+        <!-- subscriptions Section -->
+        <section id="subscriptionsSection" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-credit-card"></i> الاشتراكات</h2>
+                </div>
+
+                <div id="adminSubscriptionsContainer">
+                    سيتم عرض الاشتراكات هنا
+                </div>
+            </div>
+        </section>
+
+        <!-- plans Section -->
+        <section id="plansSection" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-layer-group"></i> الباقات</h2>
+                </div>
+                <div id="adminPlansContainer"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Add/Edit Product Modal -->
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">إضافة منتج جديد</h3>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <form id="productForm">
+                <div class="form-group">
+                    <label>اسم المنتج</label>
+                    <input type="text" id="prodName" placeholder="اسم الطبق" required>
+                </div>
+                <div class="form-group">
+                    <label>السعر</label>
+                    <input type="text" id="prodPrice" placeholder="00.00" required>
+                </div>
+                <div class="form-group">
+                    <label>صورة المنتج</label>
+                    <!-- Hidden Input for URL -->
+                    <input type="hidden" id="prodImage">
+                    <input type="file" id="prodImageFile" accept="image/*">
+                </div>
+                <div class="form-group">
+
+                    <div class="switch-row">
+
+                        <span>عرض المنتج في صفحة التقييم</span>
+
+                        <label class="switch">
+                            <input type="checkbox" id="productVisible" checked>
+                            <span class="slider"></span>
+                        </label>
+
+                    </div>
+
+                </div>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">
+                    <i class="fas fa-save"></i> حفظ المنتج
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content" style="text-align: center; max-width: 350px;">
+            <div style="font-size: 3rem; color: var(--danger); margin-bottom: 10px;">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h3>هل أنت متأكد؟</h3>
+            <p style="color: var(--text-muted); margin: 10px 0 20px;">لا يمكن التراجع عن هذا الإجراء.</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" id="cancelDelete" style="background: #e5e7eb; color: #333; flex: 1;">إلغاء</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn" style="flex: 1;">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription Modal -->
+    <div class="modal" id="subscriptionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إدارة الاشتراك</h3>
+                <div class="admin-profile-tabs">
+                    <button class="admin-tab-btn active" data-tab="adminInfoTab">معلومات</button>
+                    <button class="admin-tab-btn" data-tab="adminSubscriptionTab">الاشتراك</button>
+                    <button class="admin-tab-btn" data-tab="adminActivityTab">النشاط</button>
+                    <button class="admin-tab-btn" data-tab="adminToolsTab">الأدوات</button>
+                </div>
+                <button class="close-modal" id="closeSubscriptionModal">&times;</button>
+            </div>
+
+            <form id="subscriptionForm">
+                <div class="admin-tab-content active" id="adminInfoTab">
+                    <div class="admin-restaurant-summary" id="adminRestaurantSummary"></div>
+                </div>
+
+                <div class="admin-tab-content" id="adminSubscriptionTab">
+                    <form id="subscriptionForm">
+                        <input type="hidden" id="subscriptionId">
+
+                        <div class="form-group">
+                            <label>الباقة</label>
+                            <select id="subscriptionPlan"></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>حالة الدفع</label>
+                            <select id="paymentStatus">
+                                <option value="pending">بانتظار الدفع</option>
+                                <option value="paid">مدفوع</option>
+                                <option value="failed">فشل الدفع</option>
+                                <option value="refunded">مسترجع</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>حالة الاشتراك</label>
+                            <select id="subscriptionStatus">
+                                <option value="active">نشط</option>
+                                <option value="trial">تجريبي</option>
+                                <option value="expired">منتهي</option>
+                                <option value="suspended">موقوف</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>تاريخ بداية الاشتراك</label>
+                            <input type="date" id="subscriptionStartsAt" disabled>
+                        </div>
+
+                        <div class="form-group">
+                            <label>تاريخ الانتهاء</label>
+                            <input type="date" id="subscriptionEndsAt">
+                        </div>
+
+                        <div class="form-group">
+                            <label>رقم العملية / مرجع الدفع</label>
+                            <input type="text" id="paymentReference" placeholder="اختياري">
+                        </div>
+
+                        <button type="submit" class="btn" style="width:100%;">
+                            حفظ التغييرات
+                        </button>
+                    </form>
+                </div>
+
+                <div class="admin-tab-content" id="adminActivityTab">
+                    <div id="adminActivityContainer">جاري تحميل سجل النشاط...</div>
+                </div>
+
+                <div class="admin-tab-content" id="adminToolsTab">
+                    <div id="adminToolsContainer"></div>
+                </div>
+                <!-- <input type="hidden" id="subscriptionId">
+
+                <div class="admin-restaurant-summary" id="adminRestaurantSummary"></div>
+
+                <div class="form-group">
+                    <label>الباقة</label>
+                    <select id="subscriptionPlan"></select>
+                </div>
+
+                <div class="form-group">
+                    <label>حالة الدفع</label>
+                    <select id="paymentStatus">
+                        <option value="pending">بانتظار الدفع</option>
+                        <option value="paid">مدفوع</option>
+                        <option value="failed">فشل الدفع</option>
+                        <option value="refunded">مسترجع</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>حالة الاشتراك</label>
+                    <select id="subscriptionStatus">
+                        <option value="active">نشط</option>
+                        <option value="trial">تجريبي</option>
+                        <option value="expired">منتهي</option>
+                        <option value="suspended">موقوف</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>تاريخ الانتهاء</label>
+                    <input type="date" id="subscriptionEndsAt">
+                </div>
+
+                <div class="form-group">
+                    <label>رقم العملية / مرجع الدفع</label>
+                    <input type="text" id="paymentReference" placeholder="اختياري">
+                </div>
+
+                <button type="submit" class="btn" style="width:100%;">
+                    حفظ التغييرات
+                </button> -->
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="planModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>تعديل الباقة</h3>
+                <button class="close-modal" id="closePlanModal">&times;</button>
+            </div>
+
+            <form id="planForm">
+                <input type="hidden" id="planId">
+
+                <div class="form-group">
+                    <label>اسم الباقة</label>
+                    <input type="text" id="planName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>السعر السنوي</label>
+                    <input type="number" id="planPrice" required>
+                </div>
+
+                <div class="form-group">
+                    <label>أقصى عدد المنتجات</label>
+                    <input type="number" id="planMaxProducts" placeholder="اتركه فارغاً = غير محدود">
+                </div>
+
+                <div class="form-group">
+                    <label>أقصى عدد الفروع</label>
+                    <input type="number" id="planMaxBranches" placeholder="اتركه فارغاً = غير محدود">
+                </div>
+
+                <div class="form-group">
+                    <label>أقصى عدد التقييمات</label>
+                    <input type="number" id="planMaxReviews" placeholder="اتركه فارغاً = غير محدود">
+                </div>
+
+                <div class="form-group">
+                    <div class="switch-row">
+                        <span>الباقة مفعلة</span>
+                        <label class="switch">
+                            <input type="checkbox" id="planIsActive">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <h4 style="margin:20px 0 10px;">مزايا الباقة</h4>
+
+                <div class="form-group">
+                    <label><input type="checkbox" id="featureQrCode"> QR Code</label>
+                </div>
+
+                <div class="form-group">
+                    <label><input type="checkbox" id="featureBranches"> الفروع</label>
+                </div>
+
+                <div class="form-group">
+                    <label><input type="checkbox" id="featureAdvancedStats"> إحصائيات متقدمة</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="featureAiAnalysis"> تحليل AI</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="featureExportReports"> تصدير التقارير</label>
+                </div>
+                <button type="submit" class="btn" style="width:100%;">
+                    حفظ الباقة
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- QR -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+    <!-- Load Script -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="admin.js"></script>
+
+</body>
+
+</html>

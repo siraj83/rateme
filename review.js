@@ -1,4 +1,5 @@
 let currentProducts = [];
+let selectedProductName = '';
 
 const params = new URLSearchParams(window.location.search);
 const slug = params.get('slug');
@@ -9,6 +10,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  initStarRatings();
   await loadPublicRestaurant();
 });
 
@@ -24,6 +26,8 @@ async function loadPublicRestaurant() {
 
     const restaurant = data.restaurant;
     currentProducts = data.products;
+    window.currentBranches = data.branches || [];
+    renderBranchesSelector();
 
     document.getElementById('restaurantInfo').style.display = 'block';
     document.getElementById('restaurantName').innerText = restaurant.name || '';
@@ -59,40 +63,109 @@ function renderProducts() {
   }
 
   currentProducts.forEach(product => {
-    const avg = product.avg_rating ? Number(product.avg_rating).toFixed(1) : '0.0';
-    const total = product.total_reviews || 0;
-
     const card = document.createElement('div');
-    card.className = 'card';
-    card.style.marginBottom = '15px';
+    card.className = 'prod-card';
 
     card.innerHTML = `
-      <div style="display:flex; gap:15px; align-items:center;">
-        <img
-          src="${product.image_url || 'https://via.placeholder.com/80'}"
-          alt="${product.name}"
-          style="width:80px; height:80px; border-radius:12px; object-fit:cover;"
-        >
+      <img
+        src="${product.image_url || 'https://via.placeholder.com/300x200?text=Food'}"
+        alt="${product.name}"
+      >
 
-        <div style="flex:1;">
-          <h3 style="margin:0 0 5px;">${product.name}</h3>
-          <p style="margin:0 0 5px; color:var(--text-muted);">${product.ingredients || ''}</p>
-          <p style="margin:0; font-weight:bold;">${product.price || ''} LYD</p>
-          <small>⭐ ${avg} — ${total} تقييم</small>
-        </div>
+      <h3>${product.name}</h3>
 
-        <button class="btn" onclick="openReviewModal('${product.id}')">
-          قيّم
-        </button>
+      <div class="price">
+        ${product.price || ''} د.ل
       </div>
+
+      <button class="btn" onclick="openReviewModal('${product.id}')">
+        قيّم
+      </button>
     `;
 
     grid.appendChild(card);
   });
 }
 
+function renderBranchesSelector() {
+  const container = document.getElementById('branchSelectorContainer');
+  const select = document.getElementById('branchSelect');
+
+  if (!container || !select) return;
+
+  select.innerHTML = '';
+
+  if (!window.currentBranches || window.currentBranches.length <= 1) {
+    container.style.display = 'none';
+    select.required = false;
+    select.disabled = true;
+    return;
+  }
+
+  container.style.display = 'block';
+  select.required = true;
+  select.disabled = false;
+
+  select.innerHTML = `
+    <option value="">اختر الفرع</option>
+  `;
+
+  window.currentBranches.forEach(branch => {
+    select.innerHTML += `
+      <option value="${branch.id}">
+        ${branch.name}
+      </option>
+    `;
+  });
+}
+
+function initStarRatings() {
+  document.querySelectorAll('.star-rating').forEach(container => {
+    const targetId = container.dataset.target;
+    const input = document.getElementById(targetId);
+
+    container.innerHTML = '';
+
+    for (let i = 1; i <= 5; i++) {
+      const star = document.createElement('span');
+      star.innerHTML = '★';
+      star.dataset.value = i;
+
+      star.addEventListener('click', () => {
+        input.value = i;
+        updateStars(container, i);
+      });
+
+      container.appendChild(star);
+    }
+
+    updateStars(container, Number(input.value || 5));
+  });
+}
+
+function updateStars(container, value) {
+  container.querySelectorAll('span').forEach(star => {
+    star.classList.toggle(
+      'active',
+      Number(star.dataset.value) <= value
+    );
+  });
+}
+
 function openReviewModal(productId) {
+  const product = currentProducts.find(p => p.id === productId);
+  selectedProductName = product ? product.name : '';
+
   document.getElementById('reviewProdId').value = productId;
+
+  document.getElementById('tasteRating').value = 5;
+  document.getElementById('presentationRating').value = 5;
+  document.getElementById('priceRating').value = 5;
+
+  document.querySelectorAll('.star-rating').forEach(container => {
+    updateStars(container, 5);
+  });
+
   document.getElementById('reviewModal').style.display = 'flex';
   setTimeout(() => {
     document.getElementById('reviewModal').classList.add('show');
@@ -115,6 +188,7 @@ document.getElementById('reviewForm').addEventListener('submit', async (e) => {
 
   const payload = {
     customer_name: document.getElementById('reviewerName').value,
+    branch_id: document.getElementById('branchSelect')?.value || null,
     taste_rating: Number(document.getElementById('tasteRating').value),
     presentation_rating: Number(document.getElementById('presentationRating').value),
     price_rating: Number(document.getElementById('priceRating').value),
@@ -138,10 +212,13 @@ document.getElementById('reviewForm').addEventListener('submit', async (e) => {
       return;
     }
 
-    alert('شكراً لك، تم إرسال تقييمك بنجاح');
-
     document.getElementById('reviewForm').reset();
     closeReviewModal();
+
+    document.getElementById('thankYouModal').style.display = 'flex';
+    setTimeout(() => {
+      document.getElementById('thankYouModal').classList.add('show');
+    }, 10);
 
     await loadPublicRestaurant();
 
@@ -150,3 +227,10 @@ document.getElementById('reviewForm').addEventListener('submit', async (e) => {
     alert('حدث خطأ أثناء إرسال التقييم');
   }
 });
+
+function closeThankYouModal() {
+  document.getElementById('thankYouModal').classList.remove('show');
+  setTimeout(() => {
+    document.getElementById('thankYouModal').style.display = 'none';
+  }, 300);
+}

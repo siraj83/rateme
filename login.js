@@ -36,8 +36,6 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('token', data.token);
 
-        alert('تم تسجيل الدخول بنجاح');
-
         window.location.href = 'index.html';
 
     } catch (error) {

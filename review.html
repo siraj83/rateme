@@ -10,16 +10,10 @@
   <link rel="stylesheet" href="style.css">
 </head>
 
-<body>
-
-  <!-- Public Header -->
-  <header
-    style="background:var(--bg-white); padding:15px 20px; display:flex; justify-content:space-between; align-items:center; box-shadow:var(--shadow); position:sticky; top:0; z-index:100;">
-    <div style="font-weight:800; color:var(--primary-dark);">Rate Me</div>
-  </header>
+<body style="display: block !important; width: 100%; min-height: 100vh;">
 
   <!-- Main Content -->
-  <main style="padding: 40px 20px; max-width:800px; margin:0 auto; width:100%;">
+  <main class="public-main">
 
     <!-- Restaurant Info -->
     <div class="card" id="restaurantInfo" style="text-align:center; display:none;">
@@ -27,8 +21,10 @@
         style="width:100px; height:100px; border-radius:50%; margin-bottom:15px; object-fit:cover;">
       <h1 id="restaurantName" style="margin-bottom:10px;"></h1>
       <p id="restaurantDesc" style="color:var(--text-muted);"></p>
+      <p class="welcome-message">
+        ساعدنا في تحسين الخدمة من خلال تقييم تجربتك ❤️
+      </p>
     </div>
-
     <!-- Products Grid -->
     <div id="productsGrid">
       <!-- Products render here -->
@@ -49,37 +45,28 @@
           <label>اسمك</label>
           <input type="text" id="reviewerName" placeholder="الاسم" required>
         </div>
-        <div class="form-group">
-          <label>تقييم الطعم</label>
-          <select id="tasteRating" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
-            <option value="5">⭐⭐⭐⭐⭐ ممتاز</option>
-            <option value="4">⭐⭐⭐⭐ جيد جدًا</option>
-            <option value="3">⭐⭐⭐ جيد</option>
-            <option value="2">⭐⭐ سيء</option>
-            <option value="1">⭐ سيء جدًا</option>
+        <div class="form-group" id="branchSelectorContainer" style="display:none;">
+          <label>الفرع</label>
+          <select id="branchSelect" required>
+            <option value="">اختر الفرع</option>
           </select>
         </div>
-
-        <div class="form-group">
-          <label>تقييم الشكل</label>
-          <select id="presentationRating" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
-            <option value="5">⭐⭐⭐⭐⭐ ممتاز</option>
-            <option value="4">⭐⭐⭐⭐ جيد جدًا</option>
-            <option value="3">⭐⭐⭐ جيد</option>
-            <option value="2">⭐⭐ سيء</option>
-            <option value="1">⭐ سيء جدًا</option>
-          </select>
+        <div class="rating-group">
+          <label>🍽 تقييم الطعم</label>
+          <div class="star-rating" data-target="tasteRating"></div>
+          <input type="hidden" id="tasteRating" value="5">
         </div>
 
-        <div class="form-group">
-          <label>تقييم السعر</label>
-          <select id="priceRating" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
-            <option value="5">⭐⭐⭐⭐⭐ ممتاز</option>
-            <option value="4">⭐⭐⭐⭐ جيد جدًا</option>
-            <option value="3">⭐⭐⭐ جيد</option>
-            <option value="2">⭐⭐ سيء</option>
-            <option value="1">⭐ سيء جدًا</option>
-          </select>
+        <div class="rating-group">
+          <label>🎨 تقييم الشكل</label>
+          <div class="star-rating" data-target="presentationRating"></div>
+          <input type="hidden" id="presentationRating" value="5">
+        </div>
+
+        <div class="rating-group">
+          <label>💰 تقييم السعر</label>
+          <div class="star-rating" data-target="priceRating"></div>
+          <input type="hidden" id="priceRating" value="5">
         </div>
         <div class="form-group">
           <label>تعليق</label>
@@ -89,6 +76,30 @@
       </form>
     </div>
   </div>
+
+  <div class="modal" id="thankYouModal">
+    <div class="modal-content" style="text-align:center;">
+      <h2>شكراً لتقييمك ❤️</h2>
+      <p>تم تسجيل رأيك بنجاح، مساهمتك تساعد المطعم على التطوير.</p>
+      <button class="btn" onclick="closeThankYouModal()">حسناً</button>
+    </div>
+  </div>
+  <!-- Public footer -->
+  <footer class="public-footer">
+
+    <img
+      src="https://bkrxqjhzaedpvmrofugz.supabase.co/storage/v1/object/public/rateme-images/1d34886d-5ba1-4143-8945-41fa5f443e4b/products/1781954606839-189719298.png"
+      alt="Rate Me" class="footer-logo">
+
+    <div class="footer-title">
+      Rate Me قيمني
+    </div>
+
+    <div class="footer-subtitle">
+      منصة تقييم المطاعم
+    </div>
+
+  </footer>
 
   <script src="review.js"></script>
 </body>

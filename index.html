@@ -18,11 +18,22 @@
   <div class="modal-content" style="max-width:800px;">
     <div class="modal-header">
       <h3>تقييمات المنتج</h3>
-      <button class="close-modal" onclick="closeReviewsModal()">
-        ×
-      </button>
+      <button class="close-modal" onclick="closeReviewsModal()">×</button>
     </div>
+    <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+      <select id="reviewsPeriodFilter" style="padding:10px; border-radius:8px;">
+        <option value="all">كل التقييمات</option>
+        <option value="week">آخر أسبوع</option>
+        <option value="month">آخر شهر</option>
+        <option value="three_months">آخر 3 أشهر</option>
+      </select>
 
+      <select id="reviewsSortFilter" style="padding:10px; border-radius:8px;">
+        <option value="newest">الأحدث</option>
+        <option value="highest">الأعلى تقييماً</option>
+        <option value="lowest">الأقل تقييماً</option>
+      </select>
+    </div>
     <div id="reviewsContainer"></div>
   </div>
 </div>
@@ -43,13 +54,19 @@
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <h2>Rate Me</h2>
+      <img
+        src="https://bkrxqjhzaedpvmrofugz.supabase.co/storage/v1/object/public/rateme-images/1d34886d-5ba1-4143-8945-41fa5f443e4b/products/1781954606839-189719298.png"
+        alt="Rate Me" class="sidebar-logo">
+      <h2>Rate Me قيمني</h2>
     </div>
     <nav>
-      <a href="#" class="active"><i class="fas fa-home"></i> لوحة التحكم</a>
-      <a href="#restaurant"><i class="fas fa-store"></i> معلومات المطعم</a>
-      <a href="#products"><i class="fas fa-utensils"></i> قائمة المنتجات</a>
-      <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+      <a href="#" class="nav-link active" data-section="dashboardSection"><i class="fas fa-home"></i>الرئيسية</a>
+      <a href="#" class="nav-link" data-section="restaurantSection"><i class="fas fa-store"></i>معلومات المطعم</a>
+      <a href="#" class="nav-link" data-section="branchesSection"><i class="fas fa-code-branch"></i>الفروع</a>
+      <a href="#" class="nav-link" data-section="productsSection"><i class="fas fa-utensils"></i>المنتجات</a>
+      <a href="#" class="nav-link" data-section="dashboardSection"><i class="fas fa-chart-line"></i>الإحصائيات</a>
+      <a href="#" class="nav-link" data-section="qrSection"><i class="fas fa-qrcode"></i>رمز QR</a>
+      <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i>تسجيل الخروج</a>
     </nav>
   </aside>
 
@@ -62,67 +79,191 @@
       </button>
     </div>
 
-    <!-- Restaurant Info Card -->
-    <div class="card" id="restaurant">
-      <div class="card-header">
-        <h2><i class="fas fa-store-alt"></i> بيانات المطعم</h2>
-      </div>
-      <form id="restaurantForm">
-        <div class="form-grid">
-          <div class="form-group full-width">
-            <label>اسم المطعم</label>
-            <input type="text" id="restaurantName" placeholder="أدخل اسم المطعم">
-          </div>
-          <div class="form-group">
-            <label>شعار المطعم</label>
-            <!-- Hidden Input for URL -->
-            <input type="hidden" id="restaurantLogo">
-            <input type="file" id="logoFile" accept="image/*">
-          </div>
-          <div class="form-group">
-            <label>المدينة / الموقع</label>
-            <input type="text" id="restaurantLocation" placeholder="الموقع الجغرافي">
-          </div>
-          <div class="form-group">
-            <label>موقع المطعم على خرائط Google</label>
-            <input type="url" id="restaurantGoogleMapsUrl" placeholder="ألصق رابط موقع المطعم من Google Maps">
-            <small>
-              افتح خرائط Google ← اختر موقع المطعم ← مشاركة ← نسخ الرابط
-            </small>
-          </div>
-          <div class="form-group full-width">
-            <label>وصف المطعم ونوع المطبخ</label>
-            <textarea id="restaurantDesc" rows="3" placeholder="وصف مختصر عن المطعم..."></textarea>
-          </div>
+    <!-- Restaurant Reviews -->
+    <section id="dashboardSection" class="page-section active-section">
+
+      <div class="card">
+        <h2>نظرة عامة على التقييمات</h2>
+        <p style="color:var(--text-muted); margin-bottom:20px;">
+          متوسط تقييمات العملاء حسب الطعم والشكل والسعر
+        </p>
+
+        <div style="height:300px;">
+          <canvas id="ratingsChart"></canvas>
         </div>
-        <button type="button" class="btn" id="saveRestaurantBtn">
-          <i class="fas fa-save"></i> حفظ التغييرات
-        </button>
-      </form>
-    </div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <h3>إحصائيات الفروع</h3>
+        <div id="branchStatsContainer"></div>
+      </div>
+
+      <div class="stats-grid" style="margin-top:20px;">
+
+        <div class="card">
+          <h3 id="totalProducts">0</h3>
+          <p>المنتجات</p>
+        </div>
+
+        <div class="card">
+          <h3 id="totalReviews">0</h3>
+          <p>التقييمات</p>
+        </div>
+
+        <div class="card">
+          <h3 id="avgRating">0</h3>
+          <p>متوسط التقييم</p>
+        </div>
+
+        <div class="card">
+          <h3 id="bestProduct">-</h3>
+          <p>أفضل منتج</p>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Restaurant Info Card -->
+    <section id="restaurantSection" class="page-section">
+      <div class="card" id="restaurant">
+        <div class="card-header">
+          <h2><i class="fas fa-store-alt"></i> بيانات المطعم</h2>
+        </div>
+        <form id="restaurantForm">
+          <div class="form-grid">
+            <div class="card">
+              <h3>الاشتراك الحالي</h3>
+
+              <div id="subscriptionInfo">
+                جاري تحميل بيانات الاشتراك...
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label>اسم المطعم</label>
+              <input type="text" id="restaurantName" placeholder="أدخل اسم المطعم">
+            </div>
+            <div class="form-group">
+              <label>شعار المطعم</label>
+              <input type="file" id="restaurantLogoFile" accept="image/*">
+              <input type="hidden" id="restaurantLogo">
+              <div style="margin-top:10px;">
+                <img id="restaurantLogoPreview" src="" style="max-width:120px; display:none; border-radius:12px;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>المدينة / الموقع</label>
+              <input type="text" id="restaurantLocation" placeholder="الموقع الجغرافي">
+            </div>
+            <div class="form-group">
+              <label>موقع المطعم على خرائط Google</label>
+              <input type="url" id="restaurantGoogleMapsUrl" placeholder="ألصق رابط موقع المطعم من Google Maps">
+              <small>
+                افتح خرائط Google ← اختر موقع المطعم ← مشاركة ← نسخ الرابط
+              </small>
+            </div>
+            <div class="form-group full-width">
+              <label>وصف المطعم ونوع المطبخ</label>
+              <textarea id="restaurantDesc" rows="3" placeholder="وصف مختصر عن المطعم..."></textarea>
+            </div>
+          </div>
+          <button type="button" class="btn" id="saveRestaurantBtn">
+            <i class="fas fa-save"></i> حفظ التغييرات
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Branches info Card -->
+    <section id="branchesSection" class="page-section">
+      <div class="card">
+        <div class="card-header">
+          <h2>فروع المطعم</h2>
+        </div>
+
+        <form id="branchForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>اسم الفرع</label>
+              <input type="text" id="branchName" required placeholder="مثلاً: فرع حي الأندلس">
+            </div>
+
+            <div class="form-group">
+              <label>العنوان</label>
+              <input type="text" id="branchAddress" placeholder="اختياري">
+            </div>
+
+            <div class="form-group full-width">
+              <label>رابط Google Maps</label>
+              <input type="url" id="branchGoogleMapsUrl" placeholder="اختياري">
+            </div>
+          </div>
+
+          <button type="submit" class="btn">إضافة فرع</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>الفروع الحالية</h3>
+        <div id="branchesList"></div>
+      </div>
+    </section>
 
     <!-- Products List Card -->
-    <div class="card" id="products">
-      <div class="card-header">
-        <h2><i class="fas fa-list"></i> قائمة المنتجات</h2>
+    <section id="productsSection" class="page-section">
+      <div class="card" id="products">
+        <div class="card-header">
+          <h2><i class="fas fa-list"></i> قائمة المنتجات</h2>
+        </div>
+        <div class="table-responsive">
+          <table class="products-table" id="productsTable">
+            <thead>
+              <tr>
+                <th>الصورة</th>
+                <th>المنتج</th>
+                <th>السعر</th>
+                <th>التقييم العام</th>
+                <th>متوسط التقييمات</th>
+                <th>حالة العرض</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="productsTableBody">
+              <!-- Products render here -->
+            </tbody>
+          </table>
+        </div>
+        <div id="productsMobileList" class="products-mobile-list"></div>
       </div>
-      <div class="table-responsive">
-        <table class="products-table" id="productsTable">
-          <thead>
-            <tr>
-              <th>الصورة</th>
-              <th>المنتج</th>
-              <th>السعر</th>
-              <th>المكونات</th>
-              <th>الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody id="productsTableBody">
-            <!-- Products render here -->
-          </tbody>
-        </table>
+    </section>
+
+    <!-- Restaurant QR -->
+    <section id="qrSection" class="page-section">
+      <div class="card">
+        <h3>QR الخاص بالمطعم</h3>
+
+        <div class="qr-info">
+
+          <div class="qr-title">
+            🔗 رابط صفحة التقييم جاهز
+          </div>
+
+          <div class="qr-subtitle">
+            يمكنك مشاركة الرابط مباشرة أو استخدام رمز QR
+          </div>
+
+        </div>
+
+        <div style="text-align:center; margin:20px 0;">
+          <canvas id="qrCanvas"></canvas>
+        </div>
+        <div class="qr-actions">
+          <button class="btn" id="copyReviewLinkBtn">نسخ الرابط</button>
+          <button class="btn" id="downloadQrBtn">تحميل QR</button>
+        </div>
       </div>
-    </div>
+    </section>
+
   </main>
 
   <!-- Add/Edit Product Modal -->
@@ -142,14 +283,24 @@
           <input type="text" id="prodPrice" placeholder="00.00" required>
         </div>
         <div class="form-group">
-          <label>المكونات</label>
-          <input type="text" id="prodIngredients" placeholder="المكونات الرئيسية">
-        </div>
-        <div class="form-group">
           <label>صورة المنتج</label>
           <!-- Hidden Input for URL -->
           <input type="hidden" id="prodImage">
           <input type="file" id="prodImageFile" accept="image/*">
+        </div>
+        <div class="form-group">
+
+          <div class="switch-row">
+
+            <span>عرض المنتج في صفحة التقييم</span>
+
+            <label class="switch">
+              <input type="checkbox" id="productVisible" checked>
+              <span class="slider"></span>
+            </label>
+
+          </div>
+
         </div>
         <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">
           <i class="fas fa-save"></i> حفظ المنتج
@@ -176,7 +327,11 @@
   <!-- Toast Container -->
   <div id="toast-container"></div>
 
+  <!-- QR -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
   <!-- Load Script -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="app.js"></script>
 
 </body>
