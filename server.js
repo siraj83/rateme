@@ -9,6 +9,8 @@ const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
 const subscriptionService = require('./services/subscriptionService');
 const adminService = require('./services/adminService');
+const platformSettingsService = require('./services/platformSettingsService');
+const generateInvoiceTemplate = require('./templates/pdf/invoiceTemplate');
 const puppeteer = require('puppeteer');
 const app = express();
 
@@ -92,7 +94,6 @@ function authenticateAdmin(req, res, next) {
 }
 
 // Admin
-
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -1593,131 +1594,26 @@ app.get('/api/admin/subscriptions/:id/invoice', authenticateAdmin, async (req, r
 
         const inv = result.rows[0];
 
+        const settings = await platformSettingsService.getSettings();
+
+        const platformName = settings?.platform_name || 'Rate Me';
+        const platformNameAr = settings?.platform_name_ar || 'قيمني';
+        const platformLogo = settings?.logo_url || '';
+        const currency = settings?.currency || 'د.ل';
+        const invoicePrefix = settings?.invoice_prefix || 'INV';
+        const invoiceFooter =
+            settings?.invoice_footer ||
+            'هذه الفاتورة صادرة إلكترونياً من منصة Rate Me.';
+
         const invoiceNo =
-            'INV-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-6);
+            `${invoicePrefix}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
 
-        const html = `
-      <!DOCTYPE html>
-      <html lang="ar" dir="rtl">
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            direction: rtl;
-            padding: 40px;
-            color: #111827;
-          }
-
-          .header {
-            text-align: center;
-            margin-bottom: 30px;
-          }
-
-          .brand {
-            color: #f59e0b;
-            font-size: 28px;
-            font-weight: bold;
-          }
-
-          .box {
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 20px;
-            margin-bottom: 20px;
-          }
-
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-          }
-
-          th, td {
-            border: 1px solid #e5e7eb;
-            padding: 12px;
-            text-align: right;
-          }
-
-          th {
-            background: #f9fafb;
-          }
-
-          .total {
-            font-size: 22px;
-            font-weight: bold;
-            color: #f59e0b;
-            text-align: left;
-            margin-top: 20px;
-          }
-
-          .footer {
-            margin-top: 40px;
-            text-align: center;
-            color: #6b7280;
-            font-size: 13px;
-          }
-        </style>
-      </head>
-
-      <body>
-        <div class="header">
-          <div class="brand">Rate Me قيمني</div>
-          <h2>فاتورة اشتراك</h2>
-          <p>رقم الفاتورة: ${invoiceNo}</p>
-          <p>تاريخ الإصدار: ${new Date().toLocaleDateString('ar-LY')}</p>
-        </div>
-
-        <div class="box">
-          <h3>بيانات العميل</h3>
-          <p><strong>المطعم:</strong> ${inv.restaurant_name}</p>
-          <p><strong>رقم الهاتف:</strong> ${inv.user_phone || inv.restaurant_phone || '-'}</p>
-        </div>
-
-        <div class="box">
-          <h3>تفاصيل الاشتراك</h3>
-
-          <table>
-            <thead>
-              <tr>
-                <th>الباقة</th>
-                <th>بداية الاشتراك</th>
-                <th>نهاية الاشتراك</th>
-                <th>طريقة الدفع</th>
-                <th>المبلغ</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr>
-                <td>${inv.plan_name}</td>
-                <td>${inv.starts_at ? String(inv.starts_at).slice(0, 10) : '-'}</td>
-                <td>${inv.ends_at ? String(inv.ends_at).slice(0, 10) : '-'}</td>
-                <td>كاش</td>
-                <td>${Number(inv.price).toFixed(2)} د.ل</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="total">
-            الإجمالي: ${Number(inv.price).toFixed(2)} د.ل
-          </div>
-        </div>
-
-        <div class="box">
-          <h3>ملاحظات</h3>
-          <p>هذه الفاتورة صادرة مقابل اشتراك سنوي في منصة Rate Me.</p>
-          <p>حالة الدفع الحالية: ${inv.payment_status === 'paid' ? 'مدفوع' : 'بانتظار الدفع'}</p>
-          <p>مرجع الدفع: ${inv.payment_reference || '-'}</p>
-        </div>
-
-        <div class="footer">
-          Rate Me قيمني - منصة تقييم المطاعم
-        </div>
-      </body>
-      </html>
-    `;
-
+        const html = generateInvoiceTemplate({
+            inv,
+            settings,
+            invoiceNo,
+            currency
+        });
         const browser = await puppeteer.launch({
             headless: true,
             executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
@@ -1750,6 +1646,41 @@ app.get('/api/admin/subscriptions/:id/invoice', authenticateAdmin, async (req, r
 
     } catch (error) {
         console.error(error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+app.get('/api/admin/platform-settings', authenticateAdmin, async (req, res) => {
+    try {
+        const settings = await platformSettingsService.getSettings();
+
+        res.json({
+            success: true,
+            settings
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+
+app.put('/api/admin/platform-settings', authenticateAdmin, async (req, res) => {
+    try {
+        const settings = await platformSettingsService.updateSettings(req.body);
+
+        res.json({
+            success: true,
+            settings
+        });
+
+    } catch (error) {
         res.status(500).json({
             success: false,
             error: error.message

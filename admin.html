@@ -64,7 +64,10 @@
             <a href="#" class="nav-link" data-section="restaurantsSection"><i class="fas fa-store"></i>المطاعم
                 والاشتراكات</a>
             <a href="#" class="nav-link" data-section="plansSection"><i class="fas fa-utensils"></i>الباقات</a>
-            <a href="#" class="nav-link" data-section="dashboardSection"><i class="fas fa-chart-line"></i>الإعدادات</a>
+            <a href="#" class="nav-link" data-section="platformSettingsSection">
+                <i class="fas fa-cog"></i>
+                إعدادات المنصة
+            </a>
             <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i>تسجيل الخروج</a>
         </nav>
     </aside>
@@ -221,6 +224,90 @@
                     <h2><i class="fas fa-layer-group"></i> الباقات</h2>
                 </div>
                 <div id="adminPlansContainer"></div>
+            </div>
+        </section>
+
+        <section id="platformSettingsSection" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-cog"></i> إعدادات المنصة</h2>
+                </div>
+
+                <form id="platformSettingsForm">
+                    <div class="form-grid">
+
+                        <div class="form-group">
+                            <label>اسم المنصة</label>
+                            <input type="text" id="platformName">
+                        </div>
+
+                        <div class="form-group">
+                            <label>الاسم العربي</label>
+                            <input type="text" id="platformNameAr">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>رابط الشعار</label>
+                            <input type="url" id="platformLogoUrl">
+                        </div>
+
+                        <div class="form-group">
+                            <label>الموقع</label>
+                            <input type="url" id="platformWebsite">
+                        </div>
+
+                        <div class="form-group">
+                            <label>البريد الإلكتروني</label>
+                            <input type="email" id="platformEmail">
+                        </div>
+
+                        <div class="form-group">
+                            <label>الهاتف</label>
+                            <input type="text" id="platformPhone">
+                        </div>
+
+                        <div class="form-group">
+                            <label>واتساب</label>
+                            <input type="text" id="platformWhatsapp">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>العنوان</label>
+                            <input type="text" id="platformAddress">
+                        </div>
+
+                        <div class="form-group">
+                            <label>العملة</label>
+                            <input type="text" id="platformCurrency">
+                        </div>
+
+                        <div class="form-group">
+                            <label>رمز العملة</label>
+                            <input type="text" id="platformCurrencyCode">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Prefix الفاتورة</label>
+                            <input type="text" id="platformInvoicePrefix">
+                        </div>
+
+                        <div class="form-group">
+                            <label>مدة التجربة بالأيام</label>
+                            <input type="number" id="platformTrialDays">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>نص أسفل الفاتورة</label>
+                            <textarea id="platformInvoiceFooter" rows="3"></textarea>
+                        </div>
+
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i>
+                        حفظ إعدادات المنصة
+                    </button>
+                </form>
             </div>
         </section>
 

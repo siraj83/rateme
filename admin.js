@@ -25,6 +25,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast('تم تحديث البيانات', 'success');
     });
 
+    await loadPlatformSettings();
+
+    document
+        .getElementById('platformSettingsForm')
+        ?.addEventListener('submit', savePlatformSettings);
+
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminUser');
@@ -197,6 +203,70 @@ async function adminFetch(url, options = {}) {
     }
 
     return { res, data };
+}
+
+async function loadPlatformSettings() {
+    const result = await adminFetch('/api/admin/platform-settings');
+    if (!result) return;
+
+    const { data } = result;
+
+    if (!data.success || !data.settings) return;
+
+    const s = data.settings;
+
+    document.getElementById('platformName').value = s.platform_name || '';
+    document.getElementById('platformNameAr').value = s.platform_name_ar || '';
+    document.getElementById('platformLogoUrl').value = s.logo_url || '';
+    document.getElementById('platformWebsite').value = s.website || '';
+    document.getElementById('platformEmail').value = s.email || '';
+    document.getElementById('platformPhone').value = s.phone || '';
+    document.getElementById('platformWhatsapp').value = s.whatsapp || '';
+    document.getElementById('platformAddress').value = s.address || '';
+    document.getElementById('platformCurrency').value = s.currency || 'د.ل';
+    document.getElementById('platformCurrencyCode').value = s.currency_code || 'LYD';
+    document.getElementById('platformInvoicePrefix').value = s.invoice_prefix || 'INV';
+    document.getElementById('platformTrialDays').value = s.trial_days || 7;
+    document.getElementById('platformInvoiceFooter').value = s.invoice_footer || '';
+}
+
+async function savePlatformSettings(e) {
+    e.preventDefault();
+
+    const payload = {
+        platform_name: document.getElementById('platformName').value.trim(),
+        platform_name_ar: document.getElementById('platformNameAr').value.trim(),
+        logo_url: document.getElementById('platformLogoUrl').value.trim(),
+        website: document.getElementById('platformWebsite').value.trim(),
+        email: document.getElementById('platformEmail').value.trim(),
+        phone: document.getElementById('platformPhone').value.trim(),
+        whatsapp: document.getElementById('platformWhatsapp').value.trim(),
+        address: document.getElementById('platformAddress').value.trim(),
+        currency: document.getElementById('platformCurrency').value.trim(),
+        currency_code: document.getElementById('platformCurrencyCode').value.trim(),
+        invoice_prefix: document.getElementById('platformInvoicePrefix').value.trim(),
+        trial_days: Number(document.getElementById('platformTrialDays').value || 7),
+        invoice_footer: document.getElementById('platformInvoiceFooter').value.trim()
+    };
+
+    const result = await adminFetch('/api/admin/platform-settings', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!result) return;
+
+    const { res, data } = result;
+
+    if (!res.ok || !data.success) {
+        showToast(data.message || data.error || 'فشل حفظ الإعدادات', 'error');
+        return;
+    }
+
+    showToast('تم حفظ إعدادات المنصة', 'success');
 }
 
 async function loadAdminDashboard() {
