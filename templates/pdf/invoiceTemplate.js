@@ -1,6 +1,32 @@
+const fs = require('fs');
+const path = require('path');
+
+const regularFontBase64 = fs
+  .readFileSync(
+    path.join(__dirname, '../../assets/fonts/Tajawal-Regular.ttf')
+  )
+  .toString('base64');
+
+const boldFontBase64 = fs
+  .readFileSync(
+    path.join(__dirname, '../../assets/fonts/Tajawal-Bold.ttf')
+  )
+  .toString('base64');
+
 function formatDate(value) {
   if (!value) return '-';
-  return String(value).slice(0, 10).replaceAll('-', ' / ');
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year} / ${month} / ${day}`;
 }
 
 function generateInvoiceTemplate({
@@ -22,6 +48,7 @@ function generateInvoiceTemplate({
   const amount = Number(inv.price || 0).toFixed(2);
   const paymentStatus =
     inv.payment_status === 'paid' ? 'مدفوع' : 'بانتظار الدفع';
+  console.log('Invoice logo URL:', platformLogo);
 
   return `
 <!DOCTYPE html>
@@ -29,6 +56,41 @@ function generateInvoiceTemplate({
 <head>
 <meta charset="UTF-8" />
 <style>
+
+  @font-face {
+  font-family: 'TajawalInvoice';
+  src: url('data:font/truetype;base64,${regularFontBase64}') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+
+    @font-face {
+      font-family: 'TajawalInvoice';
+      src: url('data:font/truetype;base64,${boldFontBase64}') format('truetype');
+      font-style: normal;
+      font-weight: 700;
+      font-display: block;
+    }
+
+    html,
+    body,
+    div,
+    span,
+    p,
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td,
+    h1,
+    h2,
+    h3,
+    strong {
+      font-family: 'TajawalInvoice', sans-serif !important;
+    }
+  
   @page {
     size: A4;
     margin: 0;
@@ -40,7 +102,7 @@ function generateInvoiceTemplate({
 
   body {
     margin: 0;
-    font-family: Arial, Tahoma, sans-serif;
+    font-family: 'TajawalInvoice', sans-serif !important;
     direction: rtl;
     color: #111827;
     background: #ffffff;
@@ -48,7 +110,7 @@ function generateInvoiceTemplate({
 
   .invoice-page {
     width: 210mm;
-    min-height: 297mm;
+    height: 297mm;
     padding: 18mm 16mm 0;
     position: relative;
     overflow: hidden;
@@ -366,7 +428,11 @@ function generateInvoiceTemplate({
 
     <div class="top">
       <div class="brand">
-        ${platformLogo ? `<img src="${platformLogo}" />` : ''}
+        ${platformLogo ? `<img
+        src="${platformLogo}"
+        crossorigin="anonymous"
+        alt="${platformName}"
+      />` : ''}
         <div class="brand-name">${platformName}</div>
         <div class="brand-ar">${platformNameAr}</div>
         <div class="brand-sub">منصة تقييم المطاعم</div>
@@ -380,7 +446,12 @@ function generateInvoiceTemplate({
 
       <div class="badge-wrap">
         <div class="badge">
-          ${platformLogo ? `<img src="${platformLogo}" />` : `<span>${platformName}</span>`}
+          ${platformLogo ? `<img
+          src="${platformLogo}"
+          crossorigin="anonymous"
+          alt="${platformName}"
+        />` :
+      `<span>${platformName}</span>`}
         </div>
         <div class="ribbon"></div>
       </div>
@@ -455,10 +526,6 @@ function generateInvoiceTemplate({
           <div class="total-title">الإجمالي الكلي</div>
           <div class="total-amount">${amount} ${currency}</div>
         </div>
-        <div class="amount-text">
-          <strong>المبلغ كتابة:</strong><br>
-          ${amount} ${currency}
-        </div>
       </div>
 
       <div class="notes">
@@ -474,11 +541,15 @@ function generateInvoiceTemplate({
     <div class="bottom">
       <div class="stamp-area">
         <div class="stamp-circle">
-          ${platformLogo ? `<img src="${platformLogo}" />` : platformName}
+          ${platformLogo ? `<img
+          src="${platformLogo}"
+          crossorigin="anonymous"
+          alt="${platformName}"
+        />` : platformName}
         </div>
         <div class="stamp-text">ختم المنصة</div>
       </div>
-
+      
       <div class="signature">
         توقيع الإدارة
         <div class="signature-line"></div>

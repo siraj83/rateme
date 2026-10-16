@@ -5,7 +5,7 @@ async function getCurrentSubscription(restaurantId) {
         `
     SELECT
       s.*,
-      p.name AS plan_name,
+      COALESCE(p.display_name, p.name) AS plan_name,
       p.price,
       p.max_products,
       p.max_reviews,
@@ -66,49 +66,70 @@ async function canAddProduct(restaurantId) {
     };
 }
 
+async function getBranchCounts(restaurantId) {
+    const result = await db.query(
+        `
+        SELECT
+            COUNT(*) FILTER (
+                WHERE is_active IS TRUE
+            )::int AS active_count,
+
+            COUNT(*) FILTER (
+                WHERE is_active IS FALSE
+            )::int AS archived_count
+        FROM branches
+        WHERE restaurant_id = $1
+        `,
+        [restaurantId]
+    );
+
+    return {
+        active: result.rows[0]?.active_count || 0,
+        archived: result.rows[0]?.archived_count || 0
+    };
+}
+
 async function canAddBranch(restaurantId) {
-    const subscription = await getCurrentSubscription(restaurantId);
+    const subscription =
+        await getCurrentSubscription(restaurantId);
 
     if (!subscription) {
         return {
             ok: false,
-            message: 'لا يوجد اشتراك فعال'
+            message: 'لا يوجد اشتراك نشط'
         };
     }
 
-    if (subscription.max_branches === null || subscription.max_branches === undefined) {
-        return {
-            ok: true,
-            subscription
-        };
-    }
+    const maxBranches =
+        subscription.max_branches === null
+            ? null
+            : Number(subscription.max_branches);
 
-    const countResult = await db.query(
-        `
-    SELECT COUNT(*)
-    FROM branches
-    WHERE restaurant_id = $1
-    `,
-        [restaurantId]
-    );
+    const branchCounts =
+        await getBranchCounts(restaurantId);
 
-    const branchesCount = Number(countResult.rows[0].count);
-
-    if (branchesCount >= subscription.max_branches) {
+    if (
+        maxBranches !== null &&
+        branchCounts.active >= maxBranches
+    ) {
         return {
             ok: false,
-            message: 'لقد وصلت إلى الحد الأقصى للفروع في باقتك'
+            message:
+                'لقد وصلت إلى الحد الأقصى للفروع في باقتك'
         };
     }
 
     return {
         ok: true,
-        subscription
+        active_branches_count: branchCounts.active,
+        archived_branches_count: branchCounts.archived,
+        max_branches: maxBranches
     };
 }
 
 async function getSubscriptionSummary(restaurantId) {
-    const subscription = await getCurrentSubscription(restaurantId);
+    const subscription =
+        await getCurrentSubscription(restaurantId);
 
     if (!subscription) {
         return {
@@ -119,42 +140,47 @@ async function getSubscriptionSummary(restaurantId) {
 
     const productsCountResult = await db.query(
         `
-    SELECT COUNT(*)
-    FROM products
-    WHERE restaurant_id = $1
-    `,
+        SELECT COUNT(*)::int AS count
+        FROM products
+        WHERE restaurant_id = $1
+        `,
         [restaurantId]
     );
 
-    const branchesCountResult = await db.query(
-        `
-    SELECT COUNT(*)
-    FROM branches
-    WHERE restaurant_id = $1
-    `,
-        [restaurantId]
-    );
+    const productsCount =
+        Number(productsCountResult.rows[0]?.count || 0);
 
-    const productsCount = Number(productsCountResult.rows[0].count);
-    const branchesCount = Number(branchesCountResult.rows[0].count);
+    const branchCounts =
+        await getBranchCounts(restaurantId);
 
     return {
         ok: true,
+
         plan_name: subscription.plan_name,
         price: subscription.price,
         status: subscription.status,
         starts_at: subscription.starts_at,
         ends_at: subscription.ends_at,
+
         max_products: subscription.max_products,
         max_branches: subscription.max_branches,
+
         products_count: productsCount,
-        branches_count: branchesCount
+
+        // للتوافق مع الواجهة القديمة: يمثل النشط فقط
+        branches_count: Number(branchCounts.active || 0),
+
+        active_branches_count:
+            Number(branchCounts.active || 0),
+
+        archived_branches_count:
+            Number(branchCounts.archived || 0)
     };
 }
 
 module.exports = {
     getCurrentSubscription,
+    getSubscriptionSummary,
     canAddProduct,
-    canAddBranch,
-    getSubscriptionSummary
+    canAddBranch
 };

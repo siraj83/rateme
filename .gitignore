@@ -1,0 +1,35 @@
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+vendor/
+
+# Runtime
+logs/
+*.log
+*.pid
+tmp/
+temp/
+cache/
+
+# Uploaded or generated files
+uploads/
+storage/
+dist/
+build/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/

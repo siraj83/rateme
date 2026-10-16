@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" sizes="300x300" href="/assets/favicon/favicon.ico">
+  <title>تسجيل دخول صاحب المطعم – Rate Me</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/common/ui.css">
+</head>
+
+
+<body class="login-container auth-page">
+    <a href="https://rateme.ly/" class="logo">
+      <img src="https://storage.googleapis.com/msgsndr/0IV0KhyUwqPwxd8GvQ28/media/6957dd4be7c61370dc6562a0.png"
+        alt="Rate Me">
+    </a>
+    <h1>تسجيل دخول صاحب المطعم</h1>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label>رقم الهاتف</label>
+        <input type="tel" id="phone" required placeholder="0912345678">
+      </div>
+
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="password" required placeholder="•••••••••">
+      </div>
+
+      <button type="submit" class="btn" id="loginBtn">
+        <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+      </button>
+
+      <div class="auth-link">
+        ليس لديك حساب؟
+        <a href="/register">إنشاء حساب جديد</a>
+      </div>
+    </form>
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/assets/locales/ar.js"></script>
+    <script src="/assets/js/common/ui.js"></script>
+    <script src="/assets/js/login.js"></script>
+  </body>
+
+</html>

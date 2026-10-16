@@ -1,0 +1,137 @@
+/* =========================================
+   Rate Me - Global Toast Notifications
+   ========================================= */
+
+#toast-container,
+.toast-container {
+    position: fixed !important;
+
+    top: 20px !important;
+    right: 20px !important;
+    left: auto !important;
+    bottom: auto !important;
+
+    width: auto !important;
+    height: auto !important;
+
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+
+    z-index: 99999 !important;
+
+    pointer-events: none !important;
+}
+
+
+/* Toast */
+#toast-container .toast,
+.toast-container .toast {
+    position: relative !important;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start;
+
+    min-width: 280px;
+    max-width: 420px;
+    width: auto;
+
+    padding: 14px 18px;
+    margin: 0;
+
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    color: #1f2937 !important;
+
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+
+    line-height: 1.6;
+
+    text-align: right;
+    direction: rtl;
+
+    box-sizing: border-box;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.15);
+
+    opacity: 1;
+
+    transform: none !important;
+
+    pointer-events: none;
+
+    transition:
+        opacity 0.4s ease;
+}
+
+
+/* Toast text */
+#toast-container .toast span,
+.toast-container .toast span {
+    display: block;
+
+    color: inherit !important;
+
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+
+/* Success */
+#toast-container .toast.success,
+.toast-container .toast.success {
+    border-right: 4px solid #22c55e;
+}
+
+
+/* Error */
+#toast-container .toast.error,
+.toast-container .toast.error {
+    border-right: 4px solid #ef4444;
+}
+
+
+/* Warning */
+#toast-container .toast.warning,
+.toast-container .toast.warning {
+    border-right: 4px solid #f59e0b;
+}
+
+
+/* Info */
+#toast-container .toast.info,
+.toast-container .toast.info {
+    border-right: 4px solid #3b82f6;
+}
+
+
+/* Mobile */
+@media (max-width: 600px) {
+
+    #toast-container,
+    .toast-container {
+        top: 70px !important;
+
+        right: 15px !important;
+        left: 15px !important;
+        bottom: auto !important;
+
+        width: auto !important;
+
+        align-items: stretch;
+    }
+
+    #toast-container .toast,
+    .toast-container .toast {
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+    }
+}

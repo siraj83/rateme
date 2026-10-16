@@ -54,7 +54,7 @@ async function getRestaurants() {
     s.ends_at,
 
     p.id AS plan_id,
-    p.name AS plan_name,
+    COALESCE(p.display_name, p.name) AS plan_name,
     p.price,
 
     COUNT(DISTINCT pr.id) AS products_count,
