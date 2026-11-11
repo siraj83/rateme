@@ -501,13 +501,14 @@ app.post('/api/login', restaurantLoginLimiter, async (req, res) => {
             user.restaurant_id
         );
 
-        let passwordValid = false;
-
-        if (user.password_hash && user.password_hash.startsWith('$2')) {
-            passwordValid = await bcrypt.compare(password, user.password_hash);
-        } else {
-            passwordValid = user.password_hash === password;
-        }
+        // Bcrypt-only password verification
+        const passwordValid =
+            typeof password === 'string' &&
+            typeof user.password_hash === 'string' &&
+            await bcrypt.compare(
+                password,
+                user.password_hash
+            );
 
         if (!passwordValid) {
             return res.status(401).json({
