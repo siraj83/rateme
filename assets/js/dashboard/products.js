@@ -12,35 +12,9 @@
 
     async function loadProducts() {
         try {
-            const token =
-                localStorage.getItem('token');
-
-            const res = await fetch(
-                '/api/products',
-                {
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
-                }
+            const data = await apiRequest(
+                '/api/products'
             );
-
-            const data =
-                await res.json();
-
-            if (!res.ok || !data.success) {
-                showToast(
-                    data.message ||
-                    data.error ||
-                    getMessage(
-                        'PRODUCTS.LOAD_ERROR',
-                        'تعذر تحميل المنتجات.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
 
             allProducts =
                 (data.products || []).map(
@@ -72,6 +46,11 @@
             renderProductsTable();
 
         } catch (error) {
+
+            if (error?.status === 401) {
+                throw error;
+            }
+
             console.error(
                 'Load products error:',
                 error
@@ -349,6 +328,17 @@
         });
     }
 
+    function clearProductImageFile() {
+
+        const fileInput =
+            document.getElementById(
+                'prodImageFile'
+            );
+
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    }
 
     function openProductModal() {
         if (!productModal) {
@@ -371,6 +361,8 @@
             return;
         }
 
+        clearProductImageFile();
+
         productModal.classList.remove(
             'show'
         );
@@ -389,6 +381,8 @@
             );
 
         form?.reset();
+
+        clearProductImageFile();
 
         editingProductId = null;
 
@@ -420,6 +414,8 @@
         if (!product) {
             return;
         }
+
+        clearProductImageFile();
 
         const name =
             document.getElementById(
@@ -509,9 +505,6 @@
                 `;
             }
 
-            const token =
-                localStorage.getItem('token');
-
             const uploadedImageUrl =
                 await uploadImage(
                     'prodImageFile'
@@ -560,46 +553,17 @@
                     ? 'PUT'
                     : 'POST';
 
-            const response =
-                await fetch(
-                    url,
-                    {
-                        method,
+            const data = await apiRequest(
+                url,
+                {
+                    method,
 
-                        headers: {
-                            'Content-Type':
-                                'application/json',
-
-                            Authorization:
-                                `Bearer ${token}`
-                        },
-
-                        body:
-                            JSON.stringify(
-                                payload
-                            )
-                    }
-                );
-
-            const data =
-                await response.json();
-
-            if (
-                !response.ok ||
-                !data.success
-            ) {
-                showToast(
-                    data.message ||
-                    data.error ||
-                    getMessage(
-                        'PRODUCTS.SAVE_ERROR',
-                        'تعذر حفظ المنتج.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
+                    body:
+                        JSON.stringify(
+                            payload
+                        )
+                }
+            );
 
             showToast(
                 isEditing
@@ -626,16 +590,21 @@
             closeProductModal();
 
         } catch (error) {
+            if (error?.status === 401) {
+                return;
+            }
             console.error(
                 'Save product error:',
                 error
             );
 
             showToast(
-                getMessage(
-                    'PRODUCTS.SAVE_ERROR',
-                    'تعذر حفظ المنتج.'
-                ),
+                error?.isImageUploadError
+                    ? error.message
+                    : getMessage(
+                        'PRODUCTS.SAVE_ERROR',
+                        'تعذر حفظ المنتج. يرجى المحاولة مجددًا.'
+                    ),
                 'error'
             );
 
@@ -682,44 +651,13 @@
                     true;
 
                 try {
-                    const token =
-                        localStorage.getItem(
-                            'token'
-                        );
 
-                    const response =
-                        await fetch(
-                            `/api/products/${id}`,
-                            {
-                                method:
-                                    'DELETE',
-
-                                headers: {
-                                    Authorization:
-                                        `Bearer ${token}`
-                                }
-                            }
-                        );
-
-                    const data =
-                        await response.json();
-
-                    if (
-                        !response.ok ||
-                        !data.success
-                    ) {
-                        showToast(
-                            data.message ||
-                            data.error ||
-                            getMessage(
-                                'PRODUCTS.DELETE_ERROR',
-                                'تعذر حذف المنتج.'
-                            ),
-                            'error'
-                        );
-
-                        return;
-                    }
+                    await apiRequest(
+                        `/api/products/${id}`,
+                        {
+                            method: 'DELETE'
+                        }
+                    );
 
                     await loadProducts();
 
@@ -734,6 +672,9 @@
                     closeDeleteModal();
 
                 } catch (error) {
+                    if (error?.status === 401) {
+                        return;
+                    }
                     console.error(
                         'Delete product error:',
                         error

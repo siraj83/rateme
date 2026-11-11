@@ -640,6 +640,8 @@ body {
   width: 140px;
   height: 140px;
   object-fit: contain;
+  display: block;
+  margin: 0 auto 12px;
 }
 
 .rating-group {
@@ -2299,4 +2301,12 @@ strong {
 .subscription-detail-value {
   flex-shrink: 0;
   color: var(--primary-color);
+}
+
+.sidebar-logo {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 12px;
 }

@@ -1,4 +1,5 @@
 const express = require('express');
+const { rateLimit } = require('express-rate-limit');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const db = require('./db');
@@ -13,6 +14,8 @@ const platformSettingsService = require('./services/platformSettingsService');
 const generateInvoiceTemplate = require('./templates/pdf/invoiceTemplate');
 const puppeteer = require('puppeteer');
 const app = express();
+// الوثوق بـ Nginx المحلي فقط
+app.set('trust proxy', 'loopback');
 const path = require('path');
 
 function createSlug(value) {
@@ -102,7 +105,70 @@ async function createUniqueBranchSlug(client, restaurantId, branchName, excluded
     }
 }
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+    storage: multer.memoryStorage(),
+
+    limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1
+    },
+
+    fileFilter: (req, file, cb) => {
+
+        const allowedTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/webp'
+        ];
+
+        if (!allowedTypes.includes(file.mimetype)) {
+            return cb(
+                new Error('INVALID_IMAGE_TYPE')
+            );
+        }
+
+        cb(null, true);
+    }
+});
+
+function handleImageUpload(req, res, next) {
+
+    upload.single('image')(
+        req,
+        res,
+        (error) => {
+
+            if (!error) {
+                return next();
+            }
+
+            if (
+                error instanceof multer.MulterError &&
+                error.code === 'LIMIT_FILE_SIZE'
+            ) {
+                return res.status(413).json({
+                    success: false,
+                    message:
+                        'حجم الصورة يتجاوز الحد المسموح (5MB).'
+                });
+            }
+
+            if (error.message === 'INVALID_IMAGE_TYPE') {
+                return res.status(415).json({
+                    success: false,
+                    message:
+                        'يسمح فقط بصور JPG وPNG وWEBP.'
+                });
+            }
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    'تعذر معالجة الملف المرفوع.'
+            });
+        }
+    );
+}
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -117,6 +183,45 @@ const supabase = createClient(
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
+
+
+const adminLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    message: {
+        success: false,
+        message:
+            'تم تجاوز عدد محاولات دخول المسؤول. يرجى المحاولة لاحقًا.'
+    }
+});
+
+const restaurantLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    message: {
+        success: false,
+        message:
+            'عدد محاولات تسجيل الدخول كبير جدًا. يرجى الانتظار قليلًا قبل المحاولة مجددًا.'
+    }
+});
+
+const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message:
+            'تم تجاوز عدد طلبات إنشاء الحسابات المسموح به. يرجى المحاولة لاحقًا.'
+    }
+});
 
 function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -181,8 +286,44 @@ function authenticateAdmin(req, res, next) {
     }
 }
 
+app.get('/api/platform-branding', async (req, res) => {
+    try {
+        const settings =
+            await platformSettingsService.getSettings();
+
+        res.json({
+            success: true,
+            branding: {
+                platform_name:
+                    settings?.platform_name ||
+                    'Rate Me',
+
+                platform_name_ar:
+                    settings?.platform_name_ar ||
+                    'قيمني',
+
+                logo_url:
+                    settings?.logo_url ||
+                    null
+            }
+        });
+
+    } catch (error) {
+        console.error(
+            'Platform branding error:',
+            error
+        );
+
+        res.status(500).json({
+            success: false,
+            message:
+                'تعذر تحميل هوية المنصة'
+        });
+    }
+});
+
 // Admin
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -328,7 +469,7 @@ app.put('/api/admin/subscriptions/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', restaurantLoginLimiter, async (req, res) => {
     try {
         const { phone, password } = req.body;
 
@@ -1226,7 +1367,7 @@ app.get('/api/dashboard/branch-stats', authenticate, async (req, res) => {
 });
 
 // Upload Image
-app.post('/api/upload-image', authenticate, upload.single('image'), async (req, res) => {
+app.post('/api/upload-image', authenticate, handleImageUpload, async (req, res) => {
     try {
         console.log('Upload request received');
         console.log('Bucket:', process.env.SUPABASE_BUCKET);
@@ -1242,15 +1383,111 @@ app.post('/api/upload-image', authenticate, upload.single('image'), async (req, 
         const safeFileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}.webp`;
         const fileName = `${req.user.restaurant_id}/products/${safeFileName}`;
 
-        const compressedImage = await sharp(req.file.buffer)
-            .resize({
-                width: 1200,
-                withoutEnlargement: true
-            })
-            .webp({
-                quality: 80
-            })
-            .toBuffer();
+
+        // التحقق من محتوى الصورة الفعلي
+        let imageMetadata;
+
+        try {
+            imageMetadata = await sharp(
+                req.file.buffer
+            ).metadata();
+
+        } catch (error) {
+            return res.status(422).json({
+                success: false,
+                message:
+                    'الملف غير صالح أو ليس صورة يمكن قراءتها. يرجى اختيار صورة أخرى.'
+            });
+        }
+
+        // التحقق من الصيغة الحقيقية
+        const allowedFormats = [
+            'jpeg',
+            'png',
+            'webp'
+        ];
+
+        if (!allowedFormats.includes(imageMetadata.format)) {
+            return res.status(415).json({
+                success: false,
+                message:
+                    'صيغة الصورة الفعلية غير مدعومة. يرجى استخدام JPG أو PNG أو WEBP.'
+            });
+        }
+
+        // التحقق من أبعاد الصورة
+        const width = imageMetadata.width;
+        const height = imageMetadata.height;
+
+        if (
+            !Number.isInteger(width) ||
+            !Number.isInteger(height) ||
+            width <= 0 ||
+            height <= 0
+        ) {
+            return res.status(422).json({
+                success: false,
+                message:
+                    'تعذر قراءة أبعاد الصورة. يرجى اختيار صورة أخرى.'
+            });
+        }
+
+        // رفض الصور المتحركة متعددة الإطارات
+        if ((imageMetadata.pages || 1) > 1) {
+            return res.status(415).json({
+                success: false,
+                message:
+                    'الصور المتحركة غير مدعومة. يرجى اختيار صورة ثابتة.'
+            });
+        }
+
+        // حماية السيرفر من الصور شديدة الدقة
+        const MAX_IMAGE_PIXELS = 100_000_000;
+
+        if (width * height > MAX_IMAGE_PIXELS) {
+            return res.status(422).json({
+                success: false,
+                message:
+                    'دقة الصورة كبيرة جدًا. يرجى تقليل أبعاد الصورة ثم المحاولة مجددًا.'
+            });
+        }
+
+        // التأكد من سلامة بيانات الصورة
+        // ثم ضغطها وتحويلها إلى WebP
+        let compressedImage;
+
+        try {
+            compressedImage = await sharp(
+                req.file.buffer,
+                {
+                    limitInputPixels: MAX_IMAGE_PIXELS,
+                    failOn: 'warning'
+                }
+            )
+                .rotate()
+                .resize({
+                    width: 1200,
+                    withoutEnlargement: true
+                })
+                .webp({
+                    quality: 80
+                })
+                .toBuffer();
+
+        } catch (error) {
+
+            console.warn(
+                'Invalid uploaded image:',
+                error.message
+            );
+
+            return res.status(422).json({
+                success: false,
+                message:
+                    'الصورة غير صالحة أو تالفة. يرجى إعادة حفظها أو اختيار صورة أخرى.'
+            });
+        }
+
 
         console.log('Uploading to path:', fileName);
 
@@ -1291,7 +1528,7 @@ app.post('/api/upload-image', authenticate, upload.single('image'), async (req, 
 });
 
 // Register
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', registerLimiter, async (req, res) => {
     const client = await db.connect();
 
     try {

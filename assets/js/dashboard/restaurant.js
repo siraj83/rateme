@@ -5,32 +5,10 @@
 
     async function loadRestaurant() {
         try {
-            const token =
-                localStorage.getItem('token');
 
-            const res = await fetch(
-                '/api/restaurant/me',
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
+            const data = await apiRequest(
+                '/api/restaurant/me'
             );
-
-            const data = await res.json();
-
-            if (!res.ok || !data.success) {
-                showToast(
-                    data.message ||
-                    getMessage(
-                        'RESTAURANT.LOAD_ERROR',
-                        'تعذر تحميل بيانات المطعم.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
 
             const restaurant =
                 data.restaurant;
@@ -117,6 +95,11 @@
             }
 
         } catch (error) {
+
+            if (error?.status === 401) {
+                throw error;
+            }
+
             console.error(
                 'Load restaurant error:',
                 error
@@ -178,8 +161,6 @@
         `;
 
         try {
-            const token =
-                localStorage.getItem('token');
 
             const uploadedLogoUrl =
                 await uploadImage(
@@ -251,18 +232,10 @@
                 phone: null
             };
 
-            const res = await fetch(
+            const data = await apiRequest(
                 '/api/restaurant/me',
                 {
                     method: 'PUT',
-
-                    headers: {
-                        'Content-Type':
-                            'application/json',
-
-                        Authorization:
-                            `Bearer ${token}`
-                    },
 
                     body:
                         JSON.stringify(
@@ -270,23 +243,6 @@
                         )
                 }
             );
-
-            const data =
-                await res.json();
-
-            if (!res.ok || !data.success) {
-                showToast(
-                    data.message ||
-                    data.error ||
-                    getMessage(
-                        'RESTAURANT.SAVE_ERROR',
-                        'تعذر حفظ بيانات المطعم.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
 
             const restaurant =
                 data.restaurant;
@@ -355,16 +311,21 @@
             );
 
         } catch (error) {
+            if (error?.status === 401) {
+                return;
+            }
             console.error(
                 'Save restaurant error:',
                 error
             );
 
             showToast(
-                getMessage(
-                    'RESTAURANT.SAVE_ERROR',
-                    'تعذر حفظ بيانات المطعم.'
-                ),
+                error?.isImageUploadError
+                    ? error.message
+                    : getMessage(
+                        'RESTAURANT.SAVE_ERROR',
+                        'تعذر حفظ بيانات المطعم. يرجى المحاولة مجددًا.'
+                    ),
                 'error'
             );
 

@@ -1,3 +1,26 @@
+
+const Locale = window.AppLocale;
+
+const planLabels = {
+    basic: 'الأساسية',
+    professional: 'الاحترافية',
+    restaurants: 'سلاسل المطاعم'
+};
+
+const urlParams = new URLSearchParams(
+    window.location.search
+);
+
+const requestedPlan = urlParams.get('plan');
+
+const selectedPlan =
+    Object.prototype.hasOwnProperty.call(
+        planLabels,
+        requestedPlan
+    )
+        ? requestedPlan
+        : 'basic';
+
 window.addEventListener(
     'DOMContentLoaded',
     () => {
@@ -105,14 +128,20 @@ document
                 const data =
                     await res.json();
 
-                if (
-                    !res.ok ||
-                    !data.success
-                ) {
+                if (!res.ok || !data.success) {
+
                     showToast(
-                        Locale.REGISTER
-                            .CREATE_ERROR,
-                        'error'
+                        data?.message ||
+                        data?.error ||
+                        Locale.REGISTER.CREATE_ERROR,
+                        'error',
+                        6000
+                    );
+
+                    console.warn(
+                        'Registration failed:',
+                        res.status,
+                        data?.message || data?.error
                     );
 
                     return;

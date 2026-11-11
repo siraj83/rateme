@@ -50,9 +50,6 @@
 
         try {
 
-            const token =
-                localStorage.getItem('token');
-
             const period =
                 document
                     .getElementById(
@@ -75,39 +72,19 @@
 
             openReviewsModal();
 
-            const res = await fetch(
-                `/api/products/${productId}/reviews?period=${encodeURIComponent(period)}&sort=${encodeURIComponent(sort)}`,
-                {
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
-                }
+            const data = await apiRequest(
+                `/api/products/${productId}/reviews?period=${encodeURIComponent(period)}&sort=${encodeURIComponent(sort)}`
             );
-
-            const data =
-                await res.json();
-
-            if (!res.ok || !data.success) {
-
-                container.innerHTML = '';
-
-                showToast(
-                    getMessage(
-                        'REVIEWS.LOAD_ERROR',
-                        'تعذر تحميل التقييمات.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
 
             renderReviews(
                 data.reviews || []
             );
 
         } catch (error) {
+
+            if (error?.status === 401) {
+                return;
+            }
 
             console.error(
                 'Show reviews error:',
@@ -118,8 +95,8 @@
 
             showToast(
                 getMessage(
-                    'COMMON.NETWORK_ERROR',
-                    'تعذر الاتصال بالخادم.'
+                    'REVIEWS.LOAD_ERROR',
+                    'تعذر تحميل التقييمات.'
                 ),
                 'error'
             );
@@ -144,12 +121,11 @@
 
             container.innerHTML = `
                 <p style="text-align:center">
-                    ${
-                        getMessage(
-                            'REVIEWS.EMPTY',
-                            'لا توجد تقييمات حالياً.'
-                        )
-                    }
+                    ${getMessage(
+                'REVIEWS.EMPTY',
+                'لا توجد تقييمات حالياً.'
+            )
+                }
                 </p>
             `;
 
@@ -194,15 +170,14 @@
                     ${customerName}
                 </strong>
 
-                ${
-                    branchName
-                        ? `
+                ${branchName
+                    ? `
                             <div style="margin-top:6px;">
                                 📍 الفرع:
                                 ${branchName}
                             </div>
                         `
-                        : ''
+                    : ''
                 }
 
                 <div style="margin-top:5px;">
@@ -220,14 +195,13 @@
                     ${review.price_rating ?? '-'} / 5
                 </div>
 
-                ${
-                    comment
-                        ? `
+                ${comment
+                    ? `
                             <p style="margin-top:10px;">
                                 ${comment}
                             </p>
                         `
-                        : ''
+                    : ''
                 }
 
                 <small>

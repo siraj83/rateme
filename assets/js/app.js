@@ -1,4 +1,51 @@
 // --- DASHBOARD INITIALIZATION ---
+async function loadPlatformBranding() {
+
+  try {
+
+    const data =
+      await apiRequest(
+        '/api/platform-branding'
+      );
+
+    const branding =
+      data.branding || {};
+
+    const logo =
+      document.getElementById(
+        'platformDashboardLogo'
+      );
+
+    const name =
+      document.getElementById(
+        'platformDashboardName'
+      );
+
+    if (logo && branding.logo_url) {
+      logo.src =
+        branding.logo_url;
+
+      logo.style.display =
+        'block';
+    }
+
+    if (name) {
+      name.textContent =
+        `${branding.platform_name || 'Rate Me'} ${branding.platform_name_ar || 'قيمني'}`;
+    }
+
+  } catch (error) {
+
+    if (error?.status === 401) {
+      throw error;
+    }
+
+    console.error(
+      'Load platform branding error:',
+      error
+    );
+  }
+}
 
 window.addEventListener(
   'DOMContentLoaded',
@@ -58,6 +105,7 @@ window.addEventListener(
 
     try {
 
+      await loadPlatformBranding();
       await loadRestaurant();
       await loadSubscriptionInfo();
       await loadProducts();
@@ -66,6 +114,10 @@ window.addEventListener(
       await loadBranches();
 
     } catch (error) {
+
+      if (error?.status === 401) {
+        return;
+      }
 
       console.error(
         'Dashboard initialization error:',

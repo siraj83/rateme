@@ -9,31 +9,10 @@
         }
 
         try {
-            const token =
-                localStorage.getItem('token');
 
-            const res = await fetch(
-                '/api/subscription',
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
+            const data = await apiRequest(
+                '/api/subscription'
             );
-
-            const data = await res.json();
-
-            if (!res.ok || !data.success) {
-                container.innerHTML =
-                    data.message ||
-                    data.error ||
-                    getMessage(
-                        'COMMON.LOAD_ERROR',
-                        'تعذر تحميل بيانات الاشتراك.'
-                    );
-
-                return;
-            }
 
             const sub = data.subscription;
 
@@ -136,6 +115,11 @@
             `;
 
         } catch (error) {
+
+            if (error?.status === 401) {
+                throw error;
+            }
+
             console.error(
                 'Load subscription error:',
                 error
@@ -146,8 +130,7 @@
                     ${getMessage(
                 'COMMON.LOAD_ERROR',
                 'تعذر تحميل بيانات الاشتراك.'
-            )
-                }
+            )}
                 </div>
             `;
         }

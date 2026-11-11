@@ -215,6 +215,25 @@ async function loadPlatformSettings() {
 
     const s = data.settings;
 
+    const sidebarLogo =
+        document.getElementById(
+            'platformSidebarLogo'
+        );
+
+    if (sidebarLogo) {
+        if (s.logo_url) {
+            sidebarLogo.src =
+                s.logo_url;
+
+            sidebarLogo.style.display =
+                'block';
+        } else {
+            sidebarLogo.src = '';
+
+            sidebarLogo.style.display =
+                'none';
+        }
+    }
     document.getElementById('platformName').value = s.platform_name || '';
     document.getElementById('platformNameAr').value = s.platform_name_ar || '';
     document.getElementById('platformLogoUrl').value = s.logo_url || '';

@@ -7,28 +7,9 @@
 
         try {
 
-            const token =
-                localStorage.getItem('token');
-
-            const res = await fetch(
-                '/api/dashboard/stats',
-                {
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
-                }
+            const data = await apiRequest(
+                '/api/dashboard/stats'
             );
-
-            const data =
-                await res.json();
-
-            if (
-                !res.ok ||
-                !data.success
-            ) {
-                return;
-            }
 
             const stats =
                 data.stats || {};
@@ -100,6 +81,10 @@
             });
 
         } catch (error) {
+
+            if (error?.status === 401) {
+                throw error;
+            }
 
             console.error(
                 'Load dashboard stats error:',

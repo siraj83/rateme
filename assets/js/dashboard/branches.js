@@ -9,33 +9,9 @@
 
     async function loadBranches() {
         try {
-            const token =
-                localStorage.getItem('token');
-
-            const res = await fetch(
-                '/api/branches?include_archived=true',
-                {
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
-                }
+            const data = await apiRequest(
+                '/api/branches?include_archived=true'
             );
-
-            const data = await res.json();
-
-            if (!res.ok || !data.success) {
-                showToast(
-                    data.message ||
-                    getMessage(
-                        'BRANCHES.LOAD_ERROR',
-                        'تعذر تحميل الفروع.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
 
             const allBranches =
                 data.branches || [];
@@ -69,6 +45,11 @@
             );
 
         } catch (error) {
+
+            if (error?.status === 401) {
+                throw error;
+            }
+
             console.error(
                 'Load branches error:',
                 error
@@ -464,28 +445,9 @@
 
     async function loadBranchStats() {
         try {
-            const token =
-                localStorage.getItem('token');
-
-            const res = await fetch(
-                '/api/dashboard/branch-stats',
-                {
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
-                }
+            const data = await apiRequest(
+                '/api/dashboard/branch-stats'
             );
-
-            const data =
-                await res.json();
-
-            if (
-                !res.ok ||
-                !data.success
-            ) {
-                return;
-            }
 
             const container =
                 document.getElementById(
@@ -549,6 +511,9 @@
                     .join('');
 
         } catch (error) {
+            if (error?.status === 401) {
+                throw error;
+            }
             console.error(
                 'Load branch stats error:',
                 error
@@ -581,9 +546,6 @@
         let saveSucceeded = false;
 
         try {
-
-            const token =
-                localStorage.getItem('token');
 
             const nameInput =
                 document.getElementById(
@@ -660,18 +622,10 @@
                     ? 'PUT'
                     : 'POST';
 
-            const res = await fetch(
+            const data = await apiRequest(
                 url,
                 {
                     method,
-
-                    headers: {
-                        'Content-Type':
-                            'application/json',
-
-                        Authorization:
-                            `Bearer ${token}`
-                    },
 
                     body:
                         JSON.stringify(
@@ -679,25 +633,6 @@
                         )
                 }
             );
-
-            const data =
-                await res.json();
-
-            if (
-                !res.ok ||
-                !data.success
-            ) {
-                showToast(
-                    data.message ||
-                    getMessage(
-                        'BRANCHES.SAVE_ERROR',
-                        'تعذر حفظ بيانات الفرع.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
 
             saveSucceeded = true;
 
@@ -717,7 +652,9 @@
             resetBranchFormMode();
 
         } catch (error) {
-
+            if (error?.status === 401) {
+                return;
+            }
             console.error(
                 'Save branch error:',
                 error
@@ -959,41 +896,12 @@
 
         try {
 
-            const token =
-                localStorage.getItem(
-                    'token'
-                );
-
-            const res = await fetch(
+            const data = await apiRequest(
                 `/api/branches/${pendingBranchDeleteId}`,
                 {
-                    method: 'DELETE',
-
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
+                    method: 'DELETE'
                 }
             );
-
-            const data =
-                await res.json();
-
-            if (
-                !res.ok ||
-                !data.success
-            ) {
-                showToast(
-                    data.message ||
-                    getMessage(
-                        'BRANCHES.DELETE_ERROR',
-                        'تعذر حذف الفرع.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
 
             closeBranchDeleteModal();
 
@@ -1038,7 +946,9 @@
             );
 
         } catch (error) {
-
+            if (error?.status === 401) {
+                return;
+            }
             console.error(
                 'Delete branch error:',
                 error
@@ -1119,41 +1029,12 @@
 
         try {
 
-            const token =
-                localStorage.getItem(
-                    'token'
-                );
-
-            const res = await fetch(
+            const data = await apiRequest(
                 `/api/branches/${branchId}/reactivate`,
                 {
-                    method: 'PUT',
-
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
+                    method: 'PUT'
                 }
             );
-
-            const data =
-                await res.json();
-
-            if (
-                !res.ok ||
-                !data.success
-            ) {
-                showToast(
-                    data.message ||
-                    getMessage(
-                        'BRANCHES.REACTIVATE_ERROR',
-                        'تعذر إعادة تنشيط الفرع.'
-                    ),
-                    'error'
-                );
-
-                return;
-            }
 
             const refreshTasks = [
                 loadBranches(),
@@ -1192,6 +1073,9 @@
 
         } catch (error) {
 
+            if (error?.status === 401) {
+                return;
+            }
             console.error(
                 'Reactivate branch error:',
                 error
